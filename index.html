@@ -93,13 +93,19 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <div><label class="lbl">KKM (nilai lulus)</label><input id="c-kkm" type="number" min="0" max="100" class="inp"></div>
 <div><label class="lbl">Batas pelanggaran</label><input id="c-viol" type="number" min="1" class="inp"></div></div>
 <div class="flex flex-wrap gap-5 mt-3 text-sm"><label><input type="checkbox" id="c-act"> <b>Ujian dibuka</b></label><label><input type="checkbox" id="c-shuf"> Acak soal & opsi</label><label><input type="checkbox" id="c-show"> Tampilkan nilai ke siswa</label><button data-a="saveCfg" class="btn ml-auto bg-green-600 hover:bg-green-700"><i class="fas fa-save mr-1"></i>Simpan</button></div></div>
+
+<!-- TAB KELAS UNTUK SOAL -->
+<div id="q-class-tabs" class="flex gap-2 overflow-x-auto border-b pb-1 mb-4"></div>
+
 <div class="grid lg:grid-cols-3 gap-5"><div class="space-y-5">
-<form id="f-q" class="card space-y-2"><h3 id="q-title" class="font-bold">Buat Soal</h3><div><label class="lbl">Untuk kelas <span class="font-normal text-gray-400">(kosong = semua kelas)</span></label><div id="q-kq" class="flex flex-wrap gap-1 mb-2"></div><div id="q-k" class="flex flex-wrap gap-x-2 gap-y-2 p-1"></div></div><textarea id="q-t" class="inp h-24" placeholder="Pertanyaan" required></textarea>
+<form id="f-q" class="card space-y-2"><h3 id="q-title" class="font-bold">Buat Soal</h3>
+<div id="q-target-text" class="text-sm text-blue-700 bg-blue-50 p-2 rounded mb-2 border border-blue-100"></div>
+<textarea id="q-t" class="inp h-24" placeholder="Pertanyaan" required></textarea>
 <div><label class="lbl">Gambar soal (opsional)</label><input type="file" id="q-img" accept="image/*" class="text-xs w-full"><img id="q-prev" class="hidden mt-2 max-h-32 rounded border"><button type="button" id="q-clr" data-a="clrImg" class="hidden text-xs text-red-600 mt-1">Hapus gambar</button></div>
 <div id="q-opts" class="space-y-2"></div>
 <select id="q-a" class="inp"><option value="0">Jawaban benar: A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select><button id="q-sub" class="btn w-full bg-green-600 hover:bg-green-700">Tambah Soal</button><button type="button" id="q-cancel" data-a="cancelEdit" class="hidden btn2 w-full">Batal edit</button></form>
-<div class="card space-y-2"><h3 class="font-bold">Upload Soal Massal</h3><p class="text-xs text-gray-500">Kolom <b>Kelas</b> opsional. Bisa lebih dari satu, pisahkan dengan koma (mis. 7A,7B). Jika kosong, soal masuk ke kelas yang sedang dipilih pada daftar Bank Soal.</p><input type="file" id="up-q" accept=".xlsx,.xls,.csv" class="hidden"><button data-a="pick" data-id="up-q" class="btn w-full"><i class="fas fa-file-excel mr-1"></i>Pilih File</button><button data-a="dlQTpl" class="btn2 w-full">Unduh Template Soal</button></div></div>
-<div class="card lg:col-span-2"><div class="flex flex-wrap justify-between items-center gap-2 mb-3"><h3 class="font-bold">Bank Soal <span id="cnt-q" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">0</span></h3><div class="flex items-center gap-2"><select id="q-f" class="inp max-w-[200px]" title="Pilih daftar soal"></select><button data-a="delAllQ" class="text-sm text-red-600 whitespace-nowrap">Hapus yang tampil</button></div></div><div id="q-list" class="space-y-3 max-h-[70vh] overflow-y-auto"></div></div></div></div>
+<div class="card space-y-2"><h3 class="font-bold">Upload Soal Massal</h3><p class="text-xs text-gray-500">Kolom <b>Kelas</b> opsional. Jika dikosongkan, soal akan masuk ke Tab Ruang Kelas yang sedang dibuka saat ini.</p><input type="file" id="up-q" accept=".xlsx,.xls,.csv" class="hidden"><button data-a="pick" data-id="up-q" class="btn w-full"><i class="fas fa-file-excel mr-1"></i>Pilih File</button><button data-a="dlQTpl" class="btn2 w-full">Unduh Template Soal</button></div></div>
+<div class="card lg:col-span-2"><div class="flex flex-wrap justify-between items-center gap-2 mb-3"><h3 class="font-bold">Bank Soal <span id="cnt-q" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">0</span></h3><div class="flex items-center gap-2"><button data-a="delAllQ" class="text-sm text-red-600 whitespace-nowrap"><i class="fas fa-trash-alt mr-1"></i>Hapus yang tampil</button></div></div><div id="q-list" class="space-y-3 max-h-[70vh] overflow-y-auto"></div></div></div></div>
 <div id="t-hasil" class="p-t hidden"><div class="card"><div class="flex justify-between items-center mb-3"><h3 class="font-bold">Hasil Ujian</h3><button data-a="dlRes" class="btn"><i class="fas fa-download mr-1"></i>Excel</button></div>
 <div id="stats" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4"></div>
 <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th>NISN</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Benar</th><th>Nilai</th><th>Pelanggaran</th><th></th></tr></thead><tbody id="tb-r" class="divide-y"></tbody></table></div></div></div>
@@ -171,6 +177,7 @@ back(){view('v-land')},
 tab(id){const gr=id.split('-')[0];document.querySelectorAll('.p-'+gr).forEach(p=>p.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('.t-'+gr).forEach(b=>b.classList.toggle('on',b.dataset.id===id));if(id==='t-hasil')rR()},
 pick(id){$(id).click()},
 logout(){store.clear();location.reload()},
+setQF(id){ qF=id; resetForm(); rQ(); },
 delS(id){ask('Hapus siswa?',`NISN ${id} akan dihapus.`,()=>deleteDoc(D('students',id)).then(()=>toast('Siswa dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 delT(id){ask('Hapus guru?',`Akun ${id} akan dihapus.`,()=>deleteDoc(D('teachers',id)).then(()=>toast('Guru dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 delQ(id){ask('Hapus soal?','Soal dihapus permanen.',()=>deleteDoc(D('questions',id)).catch(e=>toast(fmtErr(e),'err')))},
@@ -240,23 +247,35 @@ subs.push(onSnapshot(C('students'),s=>{S.students=s.docs.map(d=>({nisn:d.id,...d
 const tcl=()=>String(T.kelas||'').split(',').map(x=>x.trim()).filter(Boolean);
 const qcl=q=>Array.isArray(q.kelasList)?q.kelasList:(q.kelas?[q.kelas]:[]);
 const qExp=(q,x)=>qcl(q).some(e=>norm(e)===norm(x));
-let qF='*',kInit=false;
-const fq=()=>S.questions.filter(q=>qF==='*'||(qF===''?!qcl(q).length:qExp(q,qF)));
-const getK=()=>[...$('q-k').querySelectorAll('input:checked')].map(i=>i.value);
-const setK=a=>$('q-k').querySelectorAll('input').forEach(i=>i.checked=a.some(x=>norm(x)===norm(i.value)));
-const upK=v=>{const a=String(v??'').split(/[,;]/).map(x=>x.trim()).filter(Boolean);if(!a.length)return qF&&qF!=='*'?[qF]:[];return a.map(x=>tcl().find(c=>norm(c)===norm(x))||x)};
-act.kAll=()=>setK(tcl());act.kNone=()=>setK([]);act.kGrade=g=>setK([...getK(),...tcl().filter(c=>(c.match(/^\d+/)||[])[0]===g)]);
-function fillK(){const c=tcl();let ck=getK();if(!kInit){kInit=true;if(c.length===1)ck=[c[0]]}
-const f=$('q-f');f.innerHTML='<option value="*">Semua soal ('+S.questions.length+')</option><option value="">Umum / semua kelas ('+S.questions.filter(q=>!qcl(q).length).length+')</option>'+c.map(x=>`<option value="${esc(x)}">Kelas ${esc(x)} (${S.questions.filter(q=>qExp(q,x)).length})</option>`).join('');
-f.value=qF;if(f.value!==qF){qF='*';f.value='*'}
-$('q-k').innerHTML=c.map(x=>`<label class="flex items-center gap-1.5 bg-white border px-3 py-1.5 rounded-lg shadow-sm cursor-pointer hover:bg-blue-50 transition-colors"><input type="checkbox" value="${esc(x)}" class="w-4 h-4 text-blue-600"> <span class="font-medium text-gray-700">Kelas ${esc(x)}</span></label>`).join('')||'<span class="text-gray-400">Belum ada kelas</span>';setK(ck);
-const gr=[...new Set(c.map(x=>(x.match(/^\d+/)||[])[0]).filter(Boolean))];
-$('q-kq').innerHTML='<button type="button" data-a="kAll" class="btn2 !px-2 !py-1 text-xs">Semua</button>'+gr.map(x=>`<button type="button" data-a="kGrade" data-id="${x}" class="btn2 !px-2 !py-1 text-xs">Angkatan ${x}</button>`).join('')+'<button type="button" data-a="kNone" class="btn2 !px-2 !py-1 text-xs !text-gray-600 !bg-gray-100">Kosongkan</button>'}
-$('q-f').addEventListener('change',()=>{qF=$('q-f').value;if(qF!=='*'&&!editId)setK(qF?[qF]:[]);rQ()});
-function rQ(){fillK();const L=fq();$('cnt-q').textContent=L.length;$('q-list').innerHTML=L.map((q,i)=>`<div class="border rounded-lg p-3 bg-gray-50 relative"><div class="absolute top-2 right-3 flex gap-3"><button data-a="editQ" data-id="${esc(q.id)}" class="text-blue-500" title="Edit"><i class="fas fa-pen"></i></button><button data-a="delQ" data-id="${esc(q.id)}" class="text-gray-400 hover:text-red-500" title="Hapus"><i class="fas fa-times"></i></button></div><p class="text-sm font-medium pr-16 mb-1 whitespace-pre-wrap"><span class="text-xs px-2 py-0.5 rounded-full ${qcl(q).length?'bg-blue-100 text-blue-700':'bg-gray-200 text-gray-600'} mr-1 align-middle">${qcl(q).length?'Kelas '+esc(qcl(q).join(', ')):'Semua kelas'}</span>${i+1}. ${esc(q.text)}</p>${q.image?`<img src="${esc(q.image)}" class="max-h-32 my-1 rounded border">`:''}${q.options.map((o,j)=>`<div class="text-sm ${q.answer===j?'text-green-700 font-semibold':'text-gray-600'}">${'ABCD'[j]}. ${esc(o)}${q.answer===j?' ✓':''}${oimg(q,j,'max-h-16')}</div>`).join('')}</div>`).join('')||'<p class="text-center text-gray-400 text-sm py-6">Belum ada soal.</p>'}
+
+let qF='',kInit=false; // qF='' berarti tab Semua Kelas/Umum aktif
+const fq=()=>S.questions.filter(q=>qF===''?!qcl(q).length:qExp(q,qF));
+const upK=v=>{const a=String(v??'').split(/[,;]/).map(x=>x.trim()).filter(Boolean);if(!a.length)return qF===''?[]:[qF];return a.map(x=>tcl().find(c=>norm(c)===norm(x))||x)};
+
+function fillK(){
+    const c=tcl();
+    if(!kInit){kInit=true; qF='';} // Set default ke tab "Semua Kelas"
+    
+    // Render Navigation Tabs
+    $('q-class-tabs').innerHTML=
+        `<button data-a="setQF" data-id="" class="px-5 py-2.5 whitespace-nowrap font-bold border-b-4 transition-colors ${qF===''?'border-blue-600 text-blue-700 bg-blue-50/50':'border-transparent text-gray-500 hover:text-blue-600 hover:bg-gray-50'}">Umum (Semua Kelas)</button>` +
+        c.map(x=>`<button data-a="setQF" data-id="${esc(x)}" class="px-5 py-2.5 whitespace-nowrap font-bold border-b-4 transition-colors ${qF===x?'border-blue-600 text-blue-700 bg-blue-50/50':'border-transparent text-gray-500 hover:text-blue-600 hover:bg-gray-50'}">Kelas ${esc(x)}</button>`).join('');
+        
+    // Update target context di form Buat Soal
+    $('q-target-text').innerHTML = qF === '' ? '<i class="fas fa-globe mr-1"></i> Soal ini akan berlaku untuk: <b>Umum (Semua Kelas)</b>' : `<i class="fas fa-users mr-1"></i> Soal ini akan berlaku khusus untuk: <b>Kelas ${esc(qF)}</b>`;
+}
+
+function rQ(){fillK();const L=fq();$('cnt-q').textContent=L.length;$('q-list').innerHTML=L.map((q,i)=>`<div class="border rounded-lg p-3 bg-gray-50 relative"><div class="absolute top-2 right-3 flex gap-3"><button data-a="editQ" data-id="${esc(q.id)}" class="text-blue-500" title="Edit"><i class="fas fa-pen"></i></button><button data-a="delQ" data-id="${esc(q.id)}" class="text-gray-400 hover:text-red-500" title="Hapus"><i class="fas fa-times"></i></button></div><p class="text-sm font-medium pr-16 mb-1 whitespace-pre-wrap"><span class="text-xs px-2 py-0.5 rounded-full ${qcl(q).length?'bg-blue-100 text-blue-700':'bg-gray-200 text-gray-600'} mr-1 align-middle">${qcl(q).length?'Kelas '+esc(qcl(q).join(', ')):'Semua Kelas (Umum)'}</span>${i+1}. ${esc(q.text)}</p>${q.image?`<img src="${esc(q.image)}" class="max-h-32 my-1 rounded border">`:''}${q.options.map((o,j)=>`<div class="text-sm ${q.answer===j?'text-green-700 font-semibold':'text-gray-600'}">${'ABCD'[j]}. ${esc(o)}${q.answer===j?' ✓':''}${oimg(q,j,'max-h-16')}</div>`).join('')}</div>`).join('')||'<p class="text-center text-gray-400 text-sm py-6">Belum ada soal.</p>'}
 $('f-q').addEventListener('submit',async e=>{e.preventDefault();const o=[0,1,2,3].map(i=>$('q-'+i).value.trim());
 if([0,1,2,3].some(i=>!o[i]&&!oImg[i]))return toast('Setiap opsi harus berisi teks atau gambar','err');
-const d={text:$('q-t').value,options:o,optImages:oImg.map(x=>x||null),answer:+$('q-a').value,image:qImg||null,kelasList:getK(),kelas:null,teacherId:T.username};
+
+let targetKelas = qF === '' ? [] : [qF];
+if(editId){
+    const existing = S.questions.find(x=>x.id===editId);
+    if(existing) targetKelas = existing.kelasList || []; // Pertahankan target kelas bawaannya
+}
+
+const d={text:$('q-t').value,options:o,optImages:oImg.map(x=>x||null),answer:+$('q-a').value,image:qImg||null,kelasList:targetKelas,kelas:null,teacherId:T.username};
 busy('Menyimpan soal...');try{if(editId){await setDoc(D('questions',editId),{...d,updatedAt:new Date().toISOString()},{merge:true});toast('Soal diperbarui')}else{await setDoc(doc(C('questions')),{...d,createdAt:new Date().toISOString()});toast('Soal ditambahkan')}resetForm()}catch(x){toast(fmtErr(x),'err')}busy()});
 $('up-q').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{busy('Memproses file...');const rows=await readXlsx(f),items=[],m={a:0,b:1,c:2,d:3};
 rows.forEach(r=>{const t=g(r,'pertanyaan'),o=['opsi a','opsi b','opsi c','opsi d'].map(k=>g(r,k)),a=m[norm(g(r,'jawaban (a/b/c/d)','jawaban'))],iu=String(g(r,'gambar (url, opsional)','gambar (url)','gambar')||'').trim();
@@ -272,9 +291,21 @@ const oimg=(q,j,c)=>q.optImages?.[j]?`<img src="${esc(q.optImages[j])}" draggabl
 $('q-opts').innerHTML=[0,1,2,3].map(i=>`<div class="border rounded-lg p-2 space-y-1"><input id="q-${i}" class="inp" placeholder="Opsi ${'ABCD'[i]} (teks)"><div class="flex items-center gap-2"><input type="file" id="o-img-${i}" accept="image/*" class="text-xs flex-1 min-w-0"><button type="button" id="o-clr-${i}" data-a="clrO" data-id="${i}" class="hidden text-xs text-red-600">Hapus</button></div><img id="o-prev-${i}" class="hidden max-h-20 rounded border"></div>`).join('');
 act.clrO=i=>{oImg[i]=null;$('o-img-'+i).value='';showImg('o-prev-'+i,'o-clr-'+i,null)};
 [0,1,2,3].forEach(i=>$('o-img-'+i).addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;busy('Memproses gambar...');try{oImg[i]=await shrink(f,500,100000);showImg('o-prev-'+i,'o-clr-'+i,oImg[i])}catch{act.clrO(i);toast('Gambar opsi tidak valid atau terlalu besar','err')}busy()}));
-const resetForm=()=>{editId=null;const kk=getK();$('f-q').reset();setK(kk);act.clrImg();[0,1,2,3].forEach(i=>act.clrO(i));$('q-title').textContent='Buat Soal';$('q-sub').textContent='Tambah Soal';$('q-cancel').classList.add('hidden')};
+const resetForm=()=>{
+    editId=null;
+    $('f-q').reset();
+    act.clrImg();
+    [0,1,2,3].forEach(i=>act.clrO(i));
+    $('q-title').textContent='Buat Soal';
+    $('q-sub').textContent='Tambah Soal';
+    $('q-cancel').classList.add('hidden');
+    $('q-target-text').innerHTML = qF === '' ? '<i class="fas fa-globe mr-1"></i> Soal ini akan berlaku untuk: <b>Umum (Semua Kelas)</b>' : `<i class="fas fa-users mr-1"></i> Soal ini akan berlaku khusus untuk: <b>Kelas ${esc(qF)}</b>`;
+};
 act.cancelEdit=resetForm;
-act.editQ=id=>{const q=S.questions.find(x=>x.id===id);if(!q)return;editId=id;$('q-t').value=q.text;[0,1,2,3].forEach(i=>{$('q-'+i).value=q.options[i]||'';oImg[i]=q.optImages?.[i]||null;$('o-img-'+i).value='';showImg('o-prev-'+i,'o-clr-'+i,oImg[i])});$('q-a').value=q.answer;setK(qcl(q));qImg=q.image||null;$('q-img').value='';showImg('q-prev','q-clr',qImg);$('q-title').textContent='Edit Soal';$('q-sub').textContent='Simpan Perubahan';$('q-cancel').classList.remove('hidden');$('f-q').scrollIntoView({behavior:'smooth'})};
+act.editQ=id=>{const q=S.questions.find(x=>x.id===id);if(!q)return;editId=id;$('q-t').value=q.text;[0,1,2,3].forEach(i=>{$('q-'+i).value=q.options[i]||'';oImg[i]=q.optImages?.[i]||null;$('o-img-'+i).value='';showImg('o-prev-'+i,'o-clr-'+i,oImg[i])});$('q-a').value=q.answer;qImg=q.image||null;$('q-img').value='';showImg('q-prev','q-clr',qImg);$('q-title').textContent='Edit Soal';$('q-sub').textContent='Simpan Perubahan';$('q-cancel').classList.remove('hidden');
+const kl = qcl(q);
+$('q-target-text').innerHTML = kl.length ? `<i class="fas fa-users mr-1"></i> Diedit untuk: <b>Kelas ${esc(kl.join(', '))}</b>` : '<i class="fas fa-globe mr-1"></i> Diedit untuk: <b>Umum (Semua Kelas)</b>';
+$('f-q').scrollIntoView({behavior:'smooth'})};
 const st=e=>!e?'Belum mulai':e.status==='submitted'?'Selesai':'Mengerjakan';
 function resRows(){const cl=classes(T);return S.students.filter(s=>cl.some(e=>cm(e,s.class))).sort((a,b)=>norm(a.class).localeCompare(norm(b.class))||norm(a.name).localeCompare(norm(b.name))).map(s=>({s,e:S.exams.find(x=>x.nisn===s.nisn)}))}
 function rR(){if(!T||!$('tb-r'))return;const r=resRows(),done=r.filter(x=>x.e?.status==='submitted'),sc=done.map(x=>x.e.score),kkm=T.kkm??70;
