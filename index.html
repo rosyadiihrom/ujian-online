@@ -57,11 +57,11 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 
 <!-- ADMIN -->
 <main id="v-admin" class="view min-h-screen"><header class="bg-purple-700 text-white p-4 flex justify-between"><b><i class="fas fa-user-shield mr-2"></i>Dashboard Admin</b><button data-a="logout" class="bg-purple-900 px-3 py-1 rounded-lg text-sm">Keluar</button></header>
-<nav class="bg-white border-b px-4 flex gap-6"><button data-a="tab" data-id="a-siswa" class="tb t-a on">Siswa</button><button data-a="tab" data-id="a-guru" class="tb t-a">Guru</button><button data-a="tab" data-id="a-akun" class="tb t-a">Keamanan</button></nav>
+<nav class="bg-white border-b px-4 flex gap-6"><button data-a="tab" data-id="a-siswa" class="tb t-a on">Siswa</button><button data-a="tab" data-id="a-guru" class="tb t-a">Guru</button><button data-a="tab" data-id="a-kelas" class="tb t-a">Kelas</button><button data-a="tab" data-id="a-akun" class="tb t-a">Keamanan</button></nav>
 <div class="max-w-5xl mx-auto p-4 md:p-6">
 <div id="a-siswa" class="p-a"><div class="grid md:grid-cols-3 gap-5">
 <div class="space-y-5"><form id="f-addS" class="card space-y-3"><h3 class="font-bold">Tambah / Ubah Siswa</h3>
-<div><label class="lbl">NISN</label><input id="as-n" class="inp" required></div><div><label class="lbl">Nama</label><input id="as-m" class="inp" required></div><div><label class="lbl">Kelas</label><input id="as-k" class="inp" required></div><button class="btn w-full">Simpan</button></form>
+<div><label class="lbl">NISN</label><input id="as-n" class="inp" required></div><div><label class="lbl">Nama</label><input id="as-m" class="inp" required></div><div><label class="lbl">Kelas</label><select id="as-k" class="inp" required></select></div><button class="btn w-full">Simpan</button></form>
 <div class="card space-y-2"><h3 class="font-bold">Upload Massal</h3><p class="text-xs text-gray-500">Kolom: NISN, Nama, Kelas</p>
 <input type="file" id="up-s" accept=".xlsx,.xls,.csv" class="hidden"><button onclick="up-s" data-a="pick" data-id="up-s" class="btn w-full bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel mr-1"></i>Pilih File</button><button data-a="dlTpl" class="btn2 w-full">Unduh Template</button></div></div>
 <div class="card md:col-span-2"><div class="flex justify-between items-center mb-3 gap-2"><h3 class="font-bold">Daftar Siswa <span id="cnt-s" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">0</span></h3><input id="a-q" class="inp max-w-[200px]" placeholder="Cari nama/NISN/kelas"></div>
@@ -69,10 +69,15 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <div id="a-guru" class="p-a hidden"><div class="grid md:grid-cols-3 gap-5">
 <form id="f-addT" class="card space-y-3"><h3 class="font-bold">Tambah Guru</h3>
 <div><label class="lbl">Username (tanpa spasi)</label><input id="at-u" class="inp" required pattern="[A-Za-z0-9_.\-]+"></div><div><label class="lbl">Nama</label><input id="at-n" class="inp" required></div>
-<div><label class="lbl">Mata Pelajaran</label><input id="at-m" class="inp" required></div><div><label class="lbl">Kelas / angkatan (pisah koma, mis. 7,8,9 atau 9A,9B)</label><input id="at-k" class="inp" required></div>
+<div><label class="lbl">Mata Pelajaran</label><input id="at-m" class="inp" required></div><div><label class="lbl">Kelas yang Diajar (pilih minimal satu)</label><div id="at-k-list" class="flex flex-wrap gap-2 border rounded-lg p-2 text-sm bg-gray-50 max-h-32 overflow-y-auto"></div></div>
 <div><label class="lbl">Password (min. 6)</label><input id="at-p" type="password" minlength="6" class="inp" required></div><button class="btn w-full">Simpan</button></form>
 <div class="card md:col-span-2"><h3 class="font-bold mb-3">Daftar Guru <span id="cnt-t" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">0</span></h3>
 <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th>Username</th><th>Nama</th><th>Mapel</th><th>Kelas</th><th></th></tr></thead><tbody id="tb-t" class="divide-y"></tbody></table></div></div></div></div>
+<div id="a-kelas" class="p-a hidden"><div class="grid md:grid-cols-3 gap-5">
+<form id="f-addK" class="card space-y-3"><h3 class="font-bold">Tambah Kelas</h3><p class="text-xs text-gray-500">Misal: 7, 8, 9, atau 7A, 7B</p>
+<div><label class="lbl">Nama Kelas</label><input id="ak-n" class="inp" required></div><button class="btn w-full">Simpan</button></form>
+<div class="card md:col-span-2"><h3 class="font-bold mb-3">Daftar Kelas</h3>
+<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th>Nama Kelas</th><th></th></tr></thead><tbody id="tb-k" class="divide-y"></tbody></table></div></div></div></div>
 <div id="a-akun" class="p-a hidden"><form id="f-pw" class="card max-w-md space-y-3"><h3 class="font-bold">Ganti Password Admin</h3><p class="text-xs text-gray-500">Username tetap <b>admin</b>. Segera ganti password bawaan.</p>
 <input id="pw-1" type="password" minlength="6" class="inp" placeholder="Password baru" required><input id="pw-2" type="password" class="inp" placeholder="Ulangi password" required><button class="btn">Simpan</button></form></div>
 </div></main>
@@ -89,7 +94,7 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <div><label class="lbl">Batas pelanggaran</label><input id="c-viol" type="number" min="1" class="inp"></div></div>
 <div class="flex flex-wrap gap-5 mt-3 text-sm"><label><input type="checkbox" id="c-act"> <b>Ujian dibuka</b></label><label><input type="checkbox" id="c-shuf"> Acak soal & opsi</label><label><input type="checkbox" id="c-show"> Tampilkan nilai ke siswa</label><button data-a="saveCfg" class="btn ml-auto bg-green-600 hover:bg-green-700"><i class="fas fa-save mr-1"></i>Simpan</button></div></div>
 <div class="grid lg:grid-cols-3 gap-5"><div class="space-y-5">
-<form id="f-q" class="card space-y-2"><h3 id="q-title" class="font-bold">Buat Soal</h3><div><label class="lbl">Untuk kelas <span class="font-normal text-gray-400">(kosong = semua kelas)</span></label><div id="q-kq" class="flex flex-wrap gap-1 mb-2"></div><div id="q-k" class="flex flex-wrap gap-x-3 gap-y-1 text-sm border rounded-lg p-2 bg-gray-50"></div></div><textarea id="q-t" class="inp h-24" placeholder="Pertanyaan" required></textarea>
+<form id="f-q" class="card space-y-2"><h3 id="q-title" class="font-bold">Buat Soal</h3><div><label class="lbl">Untuk kelas <span class="font-normal text-gray-400">(kosong = semua kelas)</span></label><div id="q-kq" class="flex flex-wrap gap-1 mb-2"></div><div id="q-k" class="flex flex-wrap gap-x-2 gap-y-2 p-1"></div></div><textarea id="q-t" class="inp h-24" placeholder="Pertanyaan" required></textarea>
 <div><label class="lbl">Gambar soal (opsional)</label><input type="file" id="q-img" accept="image/*" class="text-xs w-full"><img id="q-prev" class="hidden mt-2 max-h-32 rounded border"><button type="button" id="q-clr" data-a="clrImg" class="hidden text-xs text-red-600 mt-1">Hapus gambar</button></div>
 <div id="q-opts" class="space-y-2"></div>
 <select id="q-a" class="inp"><option value="0">Jawaban benar: A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select><button id="q-sub" class="btn w-full bg-green-600 hover:bg-green-700">Tambah Soal</button><button type="button" id="q-cancel" data-a="cancelEdit" class="hidden btn2 w-full">Batal edit</button></form>
@@ -146,7 +151,7 @@ const view=id=>{document.querySelectorAll('.view').forEach(v=>v.classList.remove
 const ask=(t,d,fn)=>{$('m-t').textContent=t;$('m-d').textContent=d;const m=$('modal');m.classList.replace('hidden','flex');$('m-n').onclick=()=>m.classList.replace('flex','hidden');$('m-y').onclick=()=>{m.classList.replace('flex','hidden');fn()}};
 const fmtErr=e=>typeof e==='string'?e:(e?.code==='permission-denied'?'Akses ditolak oleh aturan Firestore.':'Terjadi kesalahan jaringan/server.');
 
-let S={students:[],teachers:[],questions:[],exams:[]},T=null,subs=[],role=null,U={on:false},fails=0,lockUntil=0;
+let S={students:[],teachers:[],questions:[],exams:[],classes:[]},T=null,subs=[],role=null,U={on:false},fails=0,lockUntil=0;
 const stop=()=>{subs.forEach(f=>f());subs=[]};
 
 // ===== INIT =====
@@ -169,6 +174,7 @@ logout(){store.clear();location.reload()},
 delS(id){ask('Hapus siswa?',`NISN ${id} akan dihapus.`,()=>deleteDoc(D('students',id)).then(()=>toast('Siswa dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 delT(id){ask('Hapus guru?',`Akun ${id} akan dihapus.`,()=>deleteDoc(D('teachers',id)).then(()=>toast('Guru dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 delQ(id){ask('Hapus soal?','Soal dihapus permanen.',()=>deleteDoc(D('questions',id)).catch(e=>toast(fmtErr(e),'err')))},
+delK(id){ask('Hapus kelas?',`Kelas ${id} akan dihapus dari daftar (Siswa & Guru tidak akan terhapus otomatis).`,()=>setDoc(D('settings','config'),{classes:S.classes.filter(x=>x!==id)},{merge:true}).then(()=>toast('Kelas dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 delAllQ(){const L=fq();if(!L.length)return;ask('Hapus semua soal yang tampil?',`${L.length} soal pada daftar ini akan dihapus permanen.`,async()=>{try{for(let i=0;i<L.length;i+=400){const b=writeBatch(db);L.slice(i,i+400).forEach(q=>b.delete(D('questions',q.id)));await b.commit()}toast('Soal dihapus')}catch(e){toast(fmtErr(e),'err')}})},
 reset(id){ask('Reset ujian siswa?','Jawaban & nilai siswa ini dihapus sehingga bisa mengerjakan ulang.',()=>deleteDoc(D('exams',id)).then(()=>toast('Ujian direset')).catch(e=>toast(fmtErr(e),'err')))},
 genTok(){$('c-tok').value=Math.random().toString(36).slice(2,8).toUpperCase()},
@@ -202,18 +208,27 @@ catch(x){toast(fmtErr(x),'err')}btn.disabled=false});
 
 // ===== ADMIN =====
 function openAdmin(){stop();
+subs.push(onSnapshot(D('settings','config'),d=>{if(d.exists())S.classes=d.data().classes||[];else S.classes=[];rA()}));
 subs.push(onSnapshot(C('students'),s=>{S.students=s.docs.map(d=>({nisn:d.id,...d.data()}));rA()},e=>toast(fmtErr(e),'err')));
 subs.push(onSnapshot(C('teachers'),s=>{S.teachers=s.docs.map(d=>({username:d.id,...d.data()}));rA()},e=>toast(fmtErr(e),'err')));view('v-admin')}
 function rA(){const q=norm($('a-q').value);const L=S.students.filter(s=>!q||[s.nisn,s.name,s.class].some(x=>norm(x).includes(q))).sort((a,b)=>norm(a.class).localeCompare(norm(b.class))||norm(a.name).localeCompare(norm(b.name)));
 $('cnt-s').textContent=S.students.length;$('tb-s').innerHTML=L.map(s=>`<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td class="text-right"><button data-a="delS" data-id="${esc(s.nisn)}" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')||'<tr><td colspan="4" class="text-center text-gray-400 py-4">Tidak ada data</td></tr>';
-$('cnt-t').textContent=S.teachers.length;$('tb-t').innerHTML=S.teachers.map(t=>`<tr><td>${esc(t.username)}</td><td>${esc(t.name)}</td><td>${esc(t.mapel)}</td><td>${esc(t.kelas)}</td><td class="text-right"><button data-a="delT" data-id="${esc(t.username)}" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-gray-400 py-4">Belum ada guru</td></tr>'}
+$('cnt-t').textContent=S.teachers.length;$('tb-t').innerHTML=S.teachers.map(t=>`<tr><td>${esc(t.username)}</td><td>${esc(t.name)}</td><td>${esc(t.mapel)}</td><td>${esc(t.kelas)}</td><td class="text-right"><button data-a="delT" data-id="${esc(t.username)}" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-gray-400 py-4">Belum ada guru</td></tr>';
+$('tb-k').innerHTML=S.classes.map(k=>`<tr><td class="font-semibold">${esc(k)}</td><td class="text-right"><button data-a="delK" data-id="${esc(k)}" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')||'<tr><td colspan="2" class="text-center text-gray-400 py-4">Belum ada kelas</td></tr>';
+const sk=$('as-k').value; $('as-k').innerHTML='<option value="">-- Pilih Kelas --</option>'+S.classes.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join(''); $('as-k').value=sk;
+const tkl=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value);
+$('at-k-list').innerHTML=S.classes.map(k=>`<label class="flex items-center gap-1.5 bg-white border px-2 py-1 rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" value="${esc(k)}" class="w-4 h-4 text-blue-600" ${tkl.includes(k)?'checked':''}> ${esc(k)}</label>`).join('')||'<span class="text-xs text-red-500">Tambahkan kelas di menu Kelas terlebih dahulu!</span>';}
 $('a-q').addEventListener('input',rA);
 $('f-addS').addEventListener('submit',async e=>{e.preventDefault();try{await setDoc(D('students',$('as-n').value.trim()),{name:$('as-m').value.trim(),class:$('as-k').value.trim(),registeredAt:new Date().toISOString()});toast('Siswa disimpan');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
-$('up-s').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{busy('Memproses file...');const rows=await readXlsx(f),items=[];
-rows.forEach(r=>{const n=g(r,'nisn'),m=g(r,'nama','name'),k=g(r,'kelas','class');if(n&&m&&k)items.push([D('students',String(n).trim()),{name:String(m).trim(),class:String(k).trim(),registeredAt:new Date().toISOString()}])});
-if(!items.length)return toast('Tidak ada baris valid. Periksa kolom NISN, Nama, Kelas.','err');await batchSet(items);toast(`${items.length} siswa diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
-$('f-addT').addEventListener('submit',async e=>{e.preventDefault();const u=$('at-u').value.trim();try{if((await getDoc(D('teachers',u))).exists())return toast('Username sudah dipakai','err');
-await setDoc(D('teachers',u),{name:$('at-n').value.trim(),mapel:$('at-m').value.trim(),kelas:$('at-k').value.trim(),passHash:await sha($('at-p').value),token:Math.random().toString(36).slice(2,8).toUpperCase(),duration:60,kkm:70,maxViol:3,active:false,shuffle:true,showScore:true,createdAt:new Date().toISOString()});toast('Guru ditambahkan');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
+$('up-s').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{busy('Memproses file...');const rows=await readXlsx(f),items=[],newClasses=[];
+rows.forEach(r=>{const n=g(r,'nisn'),m=g(r,'nama','name'),k=g(r,'kelas','class');if(n&&m&&k){const cls=String(k).trim();items.push([D('students',String(n).trim()),{name:String(m).trim(),class:cls,registeredAt:new Date().toISOString()}]);if(!S.classes.includes(cls)&&!newClasses.includes(cls))newClasses.push(cls)}});
+if(!items.length)return toast('Tidak ada baris valid. Periksa kolom NISN, Nama, Kelas.','err');await batchSet(items);
+if(newClasses.length){const c=[...new Set([...S.classes,...newClasses])].sort();await setDoc(D('settings','config'),{classes:c},{merge:true});}
+toast(`${items.length} siswa diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
+$('f-addT').addEventListener('submit',async e=>{e.preventDefault();const u=$('at-u').value.trim();const kls=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value).join(',');if(!kls)return toast('Pilih minimal 1 kelas untuk guru ini.','err');
+try{if((await getDoc(D('teachers',u))).exists())return toast('Username sudah dipakai','err');
+await setDoc(D('teachers',u),{name:$('at-n').value.trim(),mapel:$('at-m').value.trim(),kelas:kls,passHash:await sha($('at-p').value),token:Math.random().toString(36).slice(2,8).toUpperCase(),duration:60,kkm:70,maxViol:3,active:false,shuffle:true,showScore:true,createdAt:new Date().toISOString()});toast('Guru ditambahkan');e.target.reset();$('at-k-list').querySelectorAll('input').forEach(i=>i.checked=false)}catch(x){toast(fmtErr(x),'err')}});
+$('f-addK').addEventListener('submit',async e=>{e.preventDefault();const n=$('ak-n').value.trim();if(!n)return;try{const c=[...new Set([...S.classes,n])].sort();await setDoc(D('settings','config'),{classes:c},{merge:true});toast('Kelas ditambahkan');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
 $('f-pw').addEventListener('submit',async e=>{e.preventDefault();const a=$('pw-1').value;if(a!==$('pw-2').value)return toast('Password tidak sama','err');try{const h=await sha(a);await setDoc(D('settings','config'),{adminHash:h},{merge:true});store.set({role:'admin',h});toast('Password diganti');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
 
 // ===== GURU =====
@@ -234,7 +249,7 @@ act.kAll=()=>setK(tcl());act.kNone=()=>setK([]);act.kGrade=g=>setK([...getK(),..
 function fillK(){const c=tcl();let ck=getK();if(!kInit){kInit=true;if(c.length===1)ck=[c[0]]}
 const f=$('q-f');f.innerHTML='<option value="*">Semua soal ('+S.questions.length+')</option><option value="">Umum / semua kelas ('+S.questions.filter(q=>!qcl(q).length).length+')</option>'+c.map(x=>`<option value="${esc(x)}">Kelas ${esc(x)} (${S.questions.filter(q=>qExp(q,x)).length})</option>`).join('');
 f.value=qF;if(f.value!==qF){qF='*';f.value='*'}
-$('q-k').innerHTML=c.map(x=>`<label class="flex items-center gap-1"><input type="checkbox" value="${esc(x)}"> ${esc(x)}</label>`).join('')||'<span class="text-gray-400">Belum ada kelas</span>';setK(ck);
+$('q-k').innerHTML=c.map(x=>`<label class="flex items-center gap-1.5 bg-white border px-3 py-1.5 rounded-lg shadow-sm cursor-pointer hover:bg-blue-50 transition-colors"><input type="checkbox" value="${esc(x)}" class="w-4 h-4 text-blue-600"> <span class="font-medium text-gray-700">Kelas ${esc(x)}</span></label>`).join('')||'<span class="text-gray-400">Belum ada kelas</span>';setK(ck);
 const gr=[...new Set(c.map(x=>(x.match(/^\d+/)||[])[0]).filter(Boolean))];
 $('q-kq').innerHTML='<button type="button" data-a="kAll" class="btn2 !px-2 !py-1 text-xs">Semua</button>'+gr.map(x=>`<button type="button" data-a="kGrade" data-id="${x}" class="btn2 !px-2 !py-1 text-xs">Angkatan ${x}</button>`).join('')+'<button type="button" data-a="kNone" class="btn2 !px-2 !py-1 text-xs !text-gray-600 !bg-gray-100">Kosongkan</button>'}
 $('q-f').addEventListener('change',()=>{qF=$('q-f').value;if(qF!=='*'&&!editId)setK(qF?[qF]:[]);rQ()});
