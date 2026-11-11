@@ -87,13 +87,20 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <input type="file" id="up-s" accept=".xlsx,.xls,.csv" class="hidden"><button onclick="up-s" data-a="pick" data-id="up-s" class="btn w-full bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel mr-1"></i>Pilih File</button><button data-a="dlTpl" class="btn2 w-full">Unduh Template</button></div></div>
 <div class="card md:col-span-2"><div class="flex justify-between items-center mb-3 gap-2"><h3 class="font-bold">Daftar Siswa <span id="cnt-s" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">0</span></h3><input id="a-q" class="inp max-w-[200px]" placeholder="Cari nama/NISN/kelas"></div>
 <div class="overflow-x-auto max-h-[60vh]"><table class="w-full text-sm"><thead><tr><th>NISN</th><th>Nama</th><th>Kelas</th><th></th></tr></thead><tbody id="tb-s" class="divide-y"></tbody></table></div></div></div></div>
+
 <div id="a-guru" class="p-a hidden"><div class="grid md:grid-cols-3 gap-5">
-<form id="f-addT" class="card space-y-3"><h3 class="font-bold">Tambah Guru</h3>
-<div><label class="lbl">Username (tanpa spasi)</label><input id="at-u" class="inp" required pattern="[A-Za-z0-9_.\-]+"></div><div><label class="lbl">Nama</label><input id="at-n" class="inp" required></div>
-<div><label class="lbl">Mata Pelajaran</label><input id="at-m" class="inp" required></div><div><label class="lbl">Kelas yang Diajar (pilih minimal satu)</label><div id="at-k-list" class="flex flex-wrap gap-2 border rounded-lg p-2 text-sm bg-gray-50 max-h-32 overflow-y-auto"></div></div>
-<div><label class="lbl">Password (min. 6)</label><input id="at-p" type="password" minlength="6" class="inp" required></div><button class="btn w-full">Simpan</button></form>
+<div class="space-y-5">
+    <form id="f-addT" class="card space-y-3"><h3 class="font-bold">Tambah Guru</h3>
+    <div><label class="lbl">Username (tanpa spasi)</label><input id="at-u" class="inp" required pattern="[A-Za-z0-9_.\-]+"></div><div><label class="lbl">Nama</label><input id="at-n" class="inp" required></div>
+    <div><label class="lbl">Mata Pelajaran</label><input id="at-m" class="inp" required></div><div><label class="lbl">Kelas yang Diajar (pilih minimal satu)</label><div id="at-k-list" class="flex flex-wrap gap-2 border rounded-lg p-2 text-sm bg-gray-50 max-h-32 overflow-y-auto"></div></div>
+    <div><label class="lbl">Password (min. 6)</label><input id="at-p" type="password" minlength="6" class="inp" required></div><button class="btn w-full">Simpan</button></form>
+    
+    <div class="card space-y-2"><h3 class="font-bold">Upload Massal Guru</h3><p class="text-xs text-gray-500">Kolom: Username, Nama, Mapel, Kelas, Password</p>
+    <input type="file" id="up-t" accept=".xlsx,.xls,.csv" class="hidden"><button data-a="pick" data-id="up-t" class="btn w-full bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel mr-1"></i>Pilih File</button><button data-a="dlTplT" class="btn2 w-full">Unduh Template</button></div>
+</div>
 <div class="card md:col-span-2"><h3 class="font-bold mb-3">Daftar Guru <span id="cnt-t" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">0</span></h3>
 <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th>Username</th><th>Nama</th><th>Mapel</th><th>Kelas</th><th></th></tr></thead><tbody id="tb-t" class="divide-y"></tbody></table></div></div></div></div>
+
 <div id="a-kelas" class="p-a hidden"><div class="grid md:grid-cols-3 gap-5">
 <form id="f-addK" class="card space-y-3"><h3 class="font-bold">Tambah Kelas</h3><p class="text-xs text-gray-500">Misal: 7, 8, 9, atau 7A, 7B</p>
 <div><label class="lbl">Nama Kelas</label><input id="ak-n" class="inp" required></div><button class="btn w-full">Simpan</button></form>
@@ -135,7 +142,7 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
             <div><label class="lbl">Token</label><div class="flex gap-1"><input id="c-tok" class="inp font-mono uppercase bg-white"><button data-a="genTok" class="btn2 !bg-white border" title="Acak"><i class="fas fa-dice"></i></button></div></div>
             <div><label class="lbl">Durasi (menit)</label><input id="c-dur" type="number" min="5" class="inp bg-white"></div>
             <div><label class="lbl">KKM (nilai lulus)</label><input id="c-kkm" type="number" min="0" max="100" class="inp bg-white"></div>
-            <div><label class="lbl">Batas pelanggaran</label><input id="c-viol" type="number" min="1" class="inp bg-white"></div>
+            <div><label class="lbl">Batas pelanggaran <span class="text-gray-400 font-normal">(0=Bebas)</span></label><input id="c-viol" type="number" min="0" class="inp bg-white"></div>
         </div>
         <div class="flex flex-wrap items-center gap-5 mt-4 text-sm">
             <label class="flex items-center gap-1.5 font-bold text-green-800"><input type="checkbox" id="c-act" class="w-4 h-4 text-green-600"> Ujian dibuka (Siswa bisa login)</label>
@@ -302,7 +309,7 @@ openPaket(id){
     $('c-tok').value = currentPaket.token || '';
     $('c-dur').value = currentPaket.duration || 60;
     $('c-kkm').value = currentPaket.kkm ?? 70;
-    $('c-viol').value = currentPaket.maxViol ?? 3;
+    $('c-viol').value = currentPaket.maxViol ?? 0;
     $('c-act').checked = !!currentPaket.active;
     $('c-shuf').checked = currentPaket.shuffle !== false;
     $('c-show').checked = currentPaket.showScore !== false;
@@ -347,7 +354,7 @@ genTok(){$('c-tok').value=Math.random().toString(36).slice(2,8).toUpperCase()},
 async saveCfg(){
     if(!currentPaket) return;
     const tok=$('c-tok').value.trim().toUpperCase(),dur=parseInt($('c-dur').value),kkm=parseInt($('c-kkm').value),mv=parseInt($('c-viol').value);
-    if(!tok)return toast('Token wajib diisi','err');if(!(dur>=5))return toast('Durasi minimal 5 menit','err');if(isNaN(kkm)||kkm<0||kkm>100)return toast('KKM 0-100','err');if(!(mv>=1))return toast('Batas pelanggaran minimal 1','err');
+    if(!tok)return toast('Token wajib diisi','err');if(!(dur>=5))return toast('Durasi minimal 5 menit','err');if(isNaN(kkm)||kkm<0||kkm>100)return toast('KKM 0-100','err');if(isNaN(mv)||mv<0)return toast('Batas pelanggaran tidak valid','err');
     
     try {
         const dup=await getDocs(query(C('packets'),where('token','==',tok)));
@@ -361,6 +368,7 @@ async saveCfg(){
 },
 
 dlTpl(){dl([{NISN:'1001',Nama:'Budi Santoso',Kelas:'9A'}],'Template Siswa','Template_Siswa.xlsx')},
+dlTplT(){dl([{Username:'guru01',Nama:'Budi Santoso',Mapel:'Matematika',Kelas:'7A, 7B',Password:'rahasia123'}],'Template Guru','Template_Guru.xlsx')},
 dlQTpl(){dl([{Pertanyaan:'Siapa penemu bola lampu?','Opsi A':'Thomas Edison','Opsi B':'Nikola Tesla','Opsi C':'Albert Einstein','Opsi D':'Isaac Newton','Jawaban (A/B/C/D)':'A','Gambar (URL, opsional)':''}],'Template Soal','Template_Soal.xlsx')},
 dlRes(){
     const r=resRows();
@@ -406,14 +414,50 @@ const tkl=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value);
 $('at-k-list').innerHTML=S.classes.map(k=>`<label class="flex items-center gap-1.5 bg-white border px-2 py-1 rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" value="${esc(k)}" class="w-4 h-4 text-blue-600" ${tkl.includes(k)?'checked':''}> ${esc(k)}</label>`).join('')||'<span class="text-xs text-red-500">Tambahkan kelas di menu Kelas terlebih dahulu!</span>';}
 $('a-q').addEventListener('input',rA);
 $('f-addS').addEventListener('submit',async e=>{e.preventDefault();try{await setDoc(D('students',$('as-n').value.trim()),{name:$('as-m').value.trim(),class:$('as-k').value.trim(),registeredAt:new Date().toISOString()});toast('Siswa disimpan');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
+
+// Upload Massal Siswa
 $('up-s').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{busy('Memproses file...');const rows=await readXlsx(f),items=[],newClasses=[];
 rows.forEach(r=>{const n=g(r,'nisn'),m=g(r,'nama','name'),k=g(r,'kelas','class');if(n&&m&&k){const cls=String(k).trim();items.push([D('students',String(n).trim()),{name:String(m).trim(),class:cls,registeredAt:new Date().toISOString()}]);if(!S.classes.includes(cls)&&!newClasses.includes(cls))newClasses.push(cls)}});
 if(!items.length)return toast('Tidak ada baris valid. Periksa kolom NISN, Nama, Kelas.','err');await batchSet(items);
 if(newClasses.length){const c=[...new Set([...S.classes,...newClasses])].sort();await setDoc(D('settings','config'),{classes:c},{merge:true});}
 toast(`${items.length} siswa diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
+
 $('f-addT').addEventListener('submit',async e=>{e.preventDefault();const u=$('at-u').value.trim();const kls=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value).join(',');if(!kls)return toast('Pilih minimal 1 kelas untuk guru ini.','err');
 try{if((await getDoc(D('teachers',u))).exists())return toast('Username sudah dipakai','err');
 await setDoc(D('teachers',u),{name:$('at-n').value.trim(),mapel:$('at-m').value.trim(),kelas:kls,passHash:await sha($('at-p').value),createdAt:new Date().toISOString()});toast('Guru ditambahkan');e.target.reset();$('at-k-list').querySelectorAll('input').forEach(i=>i.checked=false)}catch(x){toast(fmtErr(x),'err')}});
+
+// Upload Massal Guru
+$('up-t').addEventListener('change',async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{
+        busy('Memproses file...');
+        const rows=await readXlsx(f), items=[], newClasses=[];
+        for(const r of rows) {
+            const u=String(g(r,'username')||'').trim(),
+                  n=String(g(r,'nama','name')||'').trim(),
+                  m=String(g(r,'mapel','mata pelajaran')||'').trim(),
+                  k=String(g(r,'kelas','class')||'').trim(),
+                  p=String(g(r,'password')||'').trim();
+            
+            if(u&&n&&m&&k&&p) {
+                items.push([D('teachers',u),{name:n, mapel:m, kelas:k, passHash:await sha(p), createdAt:new Date().toISOString()}]);
+                k.split(',').forEach(cls => {
+                    const clTrim = cls.trim();
+                    if(clTrim && !S.classes.includes(clTrim) && !newClasses.includes(clTrim)) newClasses.push(clTrim);
+                });
+            }
+        }
+        if(!items.length) return toast('Tidak ada baris valid. Kolom wajib: Username, Nama, Mapel, Kelas, Password.','err');
+        await batchSet(items);
+        if(newClasses.length){
+            const c=[...new Set([...S.classes,...newClasses])].sort();
+            await setDoc(D('settings','config'),{classes:c},{merge:true});
+        }
+        toast(`${items.length} guru diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`);
+    } catch(x) { toast('Gagal membaca file / menyimpan', 'err'); }
+    finally { busy(); e.target.value=''; }
+});
+
 $('f-addK').addEventListener('submit',async e=>{e.preventDefault();const n=$('ak-n').value.trim();if(!n)return;try{const c=[...new Set([...S.classes,n])].sort();await setDoc(D('settings','config'),{classes:c},{merge:true});toast('Kelas ditambahkan');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
 $('f-pw').addEventListener('submit',async e=>{e.preventDefault();const a=$('pw-1').value;if(a!==$('pw-2').value)return toast('Password tidak sama','err');try{const h=await sha(a);await setDoc(D('settings','config'),{adminHash:h},{merge:true});store.set({role:'admin',h});toast('Password diganti');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
 
@@ -436,7 +480,7 @@ $('f-paket').addEventListener('submit', async e => {
         await setDoc(doc(C('packets')), {
             name, classes: cls, teacherId: T.username, createdAt: new Date().toISOString(),
             token: Math.random().toString(36).slice(2,8).toUpperCase(),
-            duration: 60, kkm: 70, maxViol: 3, active: false, shuffle: true, showScore: true
+            duration: 60, kkm: 70, maxViol: 0, active: false, shuffle: true, showScore: true // Default pelanggaran dibuat 0
         });
         toast('Paket berhasil dibuat');
         act.closePaket();
@@ -591,7 +635,11 @@ const rnd=seed(id);let list=qs.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>
 
 const sh=pkt.shuffle!==false;if(sh)list=shuf(list,rnd);list.forEach(q=>q.ord=sh?shuf([0,1,2,3],rnd):[0,1,2,3]);
 const startedAt=ex.startedAt||Date.now();
-U={on:true,id,pkt,t,s,qs:list,i:0,ans:ex.answers||{},flags:ex.flags||{},viol:ex.violations||0,end:startedAt+(pkt.duration||60)*60000,maxV:pkt.maxViol||3,dirty:false,hid:false};
+
+// Cek max pelanggaran (Default 0 / Bebas jika tidak diatur)
+const mv = pkt.maxViol !== undefined ? pkt.maxViol : 0;
+
+U={on:true,id,pkt,t,s,qs:list,i:0,ans:ex.answers||{},flags:ex.flags||{},viol:ex.violations||0,end:startedAt+(pkt.duration||60)*60000,maxV:mv,dirty:false,hid:false};
 
 await setDoc(D('exams',id),{nisn,teacherId:t.username,paketId:pkt.id,paketName:pkt.name,studentName:s.name,class:s.class,mapel:t.mapel,startedAt,status:'in_progress',answers:U.ans,flags:U.flags,violations:U.viol},{merge:true});
 store.set({role:'student',nisn,tok});
@@ -614,8 +662,22 @@ store.clear();try{if(document.fullscreenElement)await document.exitFullscreen()}
 if(U.pkt.showScore!==false){const kkm=U.pkt.kkm??70;$('r-score').classList.remove('hidden');$('r-val').textContent=score;$('r-note').innerHTML=`${correct} dari ${total} benar &middot; <b class="${score>=kkm?'text-green-600':'text-red-600'}">${score>=kkm?'Lulus':'Belum lulus'}</b>`}
 view('v-result')}
 
-// ===== PENGAWASAN =====
-document.addEventListener('visibilitychange',()=>{if(!U.on)return;if(document.hidden){U.hid=true;U.viol++;save();if(U.viol>=U.maxV)finish()}else if(U.hid){U.hid=false;toast(`Peringatan: meninggalkan halaman ujian tercatat (${U.viol}/${U.maxV}). Pelanggaran berikutnya dapat mengakhiri ujian.`,'warn')}});
+// ===== PENGAWASAN TAMPILAN MATI =====
+document.addEventListener('visibilitychange',()=>{
+    if(!U.on) return;
+    if(document.hidden){
+        U.hid=true;
+        U.viol++;
+        save();
+        if(U.maxV > 0 && U.viol >= U.maxV) finish();
+    } else if(U.hid) {
+        U.hid=false;
+        const msg = U.maxV > 0 
+            ? `Peringatan: meninggalkan halaman ujian tercatat (${U.viol}/${U.maxV}). Pelanggaran berikutnya dapat mengakhiri ujian.` 
+            : `Peringatan: meninggalkan halaman ujian tercatat (${U.viol} kali).`;
+        toast(msg, 'warn');
+    }
+});
 ['copy','cut','paste','contextmenu'].forEach(ev=>document.addEventListener(ev,e=>{if(U.on)e.preventDefault()}));
 addEventListener('beforeunload',e=>{if(U.on){e.preventDefault();e.returnValue=''}});
 </script></body></html>
