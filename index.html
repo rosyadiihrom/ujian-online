@@ -29,6 +29,15 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <h3 id="m-t" class="font-bold text-lg mb-2"></h3><p id="m-d" class="text-gray-600 mb-5 text-sm"></p>
 <div class="flex justify-end gap-2"><button id="m-n" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button><button id="m-y" class="btn">Ya, Lanjutkan</button></div></div></div>
 
+<!-- MODAL BUAT PAKET -->
+<div id="m-paket" class="fixed inset-0 z-[85] bg-black/50 hidden items-center justify-center p-4">
+<form id="f-paket" class="bg-white rounded-xl p-6 max-w-sm w-full space-y-4">
+<h3 class="font-bold text-lg">Buat Paket Soal Baru</h3>
+<div><label class="lbl">Nama Paket</label><input id="mp-name" class="inp" placeholder="Misal: UTS Semester 1" required></div>
+<div><label class="lbl">Berlaku untuk Kelas (pilih minimal satu)</label><div id="mp-kelas" class="flex flex-wrap gap-2 border p-2 rounded-lg max-h-32 overflow-y-auto bg-gray-50"></div></div>
+<div class="flex justify-end gap-2 mt-4"><button type="button" data-a="closePaket" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button><button type="submit" class="btn">Buat Paket</button></div>
+</form></div>
+
 <!-- LANDING -->
 <main id="v-land" class="view on"><div class="min-h-screen flex flex-col items-center justify-center p-4">
 <div class="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg"><i class="fas fa-laptop-code text-4xl text-white"></i></div>
@@ -87,26 +96,51 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <nav class="bg-white border-b px-4 flex gap-6"><button data-a="tab" data-id="t-ujian" class="tb t-t on">Manajemen Ujian</button><button data-a="tab" data-id="t-hasil" class="tb t-t">Hasil Siswa</button></nav>
 <div class="max-w-5xl mx-auto p-4 md:p-6">
 <div id="t-ujian" class="p-t space-y-5">
+<!-- Pengaturan Global -->
 <div class="card"><h3 class="font-bold mb-3">Pengaturan Ujian</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">
 <div><label class="lbl">Token</label><div class="flex gap-1"><input id="c-tok" class="inp font-mono uppercase"><button data-a="genTok" class="btn2" title="Acak"><i class="fas fa-dice"></i></button></div></div>
 <div><label class="lbl">Durasi (menit)</label><input id="c-dur" type="number" min="5" class="inp"></div>
 <div><label class="lbl">KKM (nilai lulus)</label><input id="c-kkm" type="number" min="0" max="100" class="inp"></div>
 <div><label class="lbl">Batas pelanggaran</label><input id="c-viol" type="number" min="1" class="inp"></div></div>
-<div class="flex flex-wrap gap-5 mt-3 text-sm"><label><input type="checkbox" id="c-act"> <b>Ujian dibuka</b></label><label><input type="checkbox" id="c-shuf"> Acak soal & opsi</label><label><input type="checkbox" id="c-show"> Tampilkan nilai ke siswa</label><button data-a="saveCfg" class="btn ml-auto bg-green-600 hover:bg-green-700"><i class="fas fa-save mr-1"></i>Simpan</button></div></div>
+<div class="flex flex-wrap gap-5 mt-3 text-sm"><label><input type="checkbox" id="c-act"> <b>Ujian dibuka</b> (Siswa bisa masuk)</label><label><input type="checkbox" id="c-shuf"> Acak soal & opsi</label><label><input type="checkbox" id="c-show"> Tampilkan nilai ke siswa</label><button data-a="saveCfg" class="btn ml-auto bg-green-600 hover:bg-green-700"><i class="fas fa-save mr-1"></i>Simpan</button></div></div>
 
-<!-- TAB KELAS UNTUK SOAL -->
-<div id="q-class-tabs" class="flex gap-2 overflow-x-auto border-b pb-1 mb-4"></div>
+<!-- STATE 1: DAFTAR PAKET -->
+<div id="p-paket-list" class="space-y-4">
+    <div class="flex justify-between items-center pb-2 border-b">
+        <h3 class="font-bold text-lg">Daftar Paket Soal</h3>
+        <button data-a="newPaket" class="btn"><i class="fas fa-plus mr-1"></i>Buat Paket Baru</button>
+    </div>
+    <div id="paket-list" class="grid md:grid-cols-3 gap-5 mt-4"></div>
+</div>
 
-<div class="grid lg:grid-cols-3 gap-5"><div class="space-y-5">
-<form id="f-q" class="card space-y-2"><h3 id="q-title" class="font-bold">Buat Soal</h3>
-<div id="q-target-text" class="text-sm text-blue-700 bg-blue-50 p-2 rounded mb-2 border border-blue-100"></div>
-<textarea id="q-t" class="inp h-24" placeholder="Pertanyaan" required></textarea>
-<div><label class="lbl">Gambar soal (opsional)</label><input type="file" id="q-img" accept="image/*" class="text-xs w-full"><img id="q-prev" class="hidden mt-2 max-h-32 rounded border"><button type="button" id="q-clr" data-a="clrImg" class="hidden text-xs text-red-600 mt-1">Hapus gambar</button></div>
-<div id="q-opts" class="space-y-2"></div>
-<select id="q-a" class="inp"><option value="0">Jawaban benar: A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select><button id="q-sub" class="btn w-full bg-green-600 hover:bg-green-700">Tambah Soal</button><button type="button" id="q-cancel" data-a="cancelEdit" class="hidden btn2 w-full">Batal edit</button></form>
-<div class="card space-y-2"><h3 class="font-bold">Upload Soal Massal</h3><p class="text-xs text-gray-500">Kolom <b>Kelas</b> opsional. Jika dikosongkan, soal akan masuk ke Tab Ruang Kelas yang sedang dibuka saat ini.</p><input type="file" id="up-q" accept=".xlsx,.xls,.csv" class="hidden"><button data-a="pick" data-id="up-q" class="btn w-full"><i class="fas fa-file-excel mr-1"></i>Pilih File</button><button data-a="dlQTpl" class="btn2 w-full">Unduh Template Soal</button></div></div>
-<div class="card lg:col-span-2"><div class="flex flex-wrap justify-between items-center gap-2 mb-3"><h3 class="font-bold">Bank Soal <span id="cnt-q" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">0</span></h3><div class="flex items-center gap-2"><button data-a="delAllQ" class="text-sm text-red-600 whitespace-nowrap"><i class="fas fa-trash-alt mr-1"></i>Hapus yang tampil</button></div></div><div id="q-list" class="space-y-3 max-h-[70vh] overflow-y-auto"></div></div></div></div>
-<div id="t-hasil" class="p-t hidden"><div class="card"><div class="flex justify-between items-center mb-3"><h3 class="font-bold">Hasil Ujian</h3><button data-a="dlRes" class="btn"><i class="fas fa-download mr-1"></i>Excel</button></div>
+<!-- STATE 2: DETAIL PAKET (BUAT SOAL) -->
+<div id="p-paket-detail" class="hidden">
+    <div class="flex items-center gap-4 mb-6 border-b pb-4">
+        <button data-a="backPaket" class="text-gray-500 hover:text-blue-600 bg-gray-100 p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors"><i class="fas fa-arrow-left text-xl"></i></button>
+        <div>
+            <h3 id="det-paket-name" class="font-bold text-xl text-blue-800">Nama Paket</h3>
+            <p id="det-paket-kelas" class="text-sm font-semibold text-gray-500 mt-0.5"><i class="fas fa-users mr-1"></i>Kelas</p>
+        </div>
+    </div>
+    
+    <div class="grid lg:grid-cols-3 gap-5">
+        <div class="space-y-5">
+            <form id="f-q" class="card space-y-2"><h3 id="q-title" class="font-bold">Buat Soal Manual</h3>
+            <textarea id="q-t" class="inp h-24" placeholder="Pertanyaan" required></textarea>
+            <div><label class="lbl">Gambar soal (opsional)</label><input type="file" id="q-img" accept="image/*" class="text-xs w-full"><img id="q-prev" class="hidden mt-2 max-h-32 rounded border"><button type="button" id="q-clr" data-a="clrImg" class="hidden text-xs text-red-600 mt-1">Hapus gambar</button></div>
+            <div id="q-opts" class="space-y-2"></div>
+            <select id="q-a" class="inp"><option value="0">Jawaban benar: A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select><button id="q-sub" class="btn w-full bg-green-600 hover:bg-green-700">Tambah Soal</button><button type="button" id="q-cancel" data-a="cancelEdit" class="hidden btn2 w-full">Batal edit</button></form>
+            
+            <div class="card space-y-2"><h3 class="font-bold">Upload Massal via Excel</h3><p class="text-xs text-gray-500">Soal akan langsung dimasukkan ke paket ini.</p><input type="file" id="up-q" accept=".xlsx,.xls,.csv" class="hidden"><button data-a="pick" data-id="up-q" class="btn w-full"><i class="fas fa-file-excel mr-1"></i>Pilih File Excel</button><button data-a="dlQTpl" class="btn2 w-full">Unduh Template Excel</button></div>
+        </div>
+        
+        <div class="card lg:col-span-2"><div class="flex flex-wrap justify-between items-center gap-2 mb-3"><h3 class="font-bold">Isi Paket Soal <span id="cnt-q" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">0</span></h3><div class="flex items-center gap-2"><button data-a="delAllQ" class="text-sm text-red-600 whitespace-nowrap"><i class="fas fa-trash-alt mr-1"></i>Kosongkan Paket</button></div></div><div id="q-list" class="space-y-3 max-h-[70vh] overflow-y-auto"></div></div>
+    </div>
+</div>
+</div>
+<!-- END T-UJIAN -->
+
+<div id="t-hasil" class="p-t hidden"><div class="card"><div class="flex justify-between items-center mb-3"><h3 class="font-bold">Hasil Ujian</h3><button data-a="dlRes" class="btn bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel mr-1"></i>Export Excel</button></div>
 <div id="stats" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4"></div>
 <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th>NISN</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Benar</th><th>Nilai</th><th>Pelanggaran</th><th></th></tr></thead><tbody id="tb-r" class="divide-y"></tbody></table></div></div></div>
 </div></main>
@@ -157,7 +191,8 @@ const view=id=>{document.querySelectorAll('.view').forEach(v=>v.classList.remove
 const ask=(t,d,fn)=>{$('m-t').textContent=t;$('m-d').textContent=d;const m=$('modal');m.classList.replace('hidden','flex');$('m-n').onclick=()=>m.classList.replace('flex','hidden');$('m-y').onclick=()=>{m.classList.replace('flex','hidden');fn()}};
 const fmtErr=e=>typeof e==='string'?e:(e?.code==='permission-denied'?'Akses ditolak oleh aturan Firestore.':'Terjadi kesalahan jaringan/server.');
 
-let S={students:[],teachers:[],questions:[],exams:[],classes:[]},T=null,subs=[],role=null,U={on:false},fails=0,lockUntil=0;
+let S={students:[],teachers:[],questions:[],exams:[],classes:[],packets:[]},T=null,subs=[],role=null,U={on:false},fails=0,lockUntil=0;
+let currentPaket = null;
 const stop=()=>{subs.forEach(f=>f());subs=[]};
 
 // ===== INIT =====
@@ -177,12 +212,58 @@ back(){view('v-land')},
 tab(id){const gr=id.split('-')[0];document.querySelectorAll('.p-'+gr).forEach(p=>p.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('.t-'+gr).forEach(b=>b.classList.toggle('on',b.dataset.id===id));if(id==='t-hasil')rR()},
 pick(id){$(id).click()},
 logout(){store.clear();location.reload()},
-setQF(id){ qF=id; resetForm(); rQ(); },
 delS(id){ask('Hapus siswa?',`NISN ${id} akan dihapus.`,()=>deleteDoc(D('students',id)).then(()=>toast('Siswa dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 delT(id){ask('Hapus guru?',`Akun ${id} akan dihapus.`,()=>deleteDoc(D('teachers',id)).then(()=>toast('Guru dihapus')).catch(e=>toast(fmtErr(e),'err')))},
-delQ(id){ask('Hapus soal?','Soal dihapus permanen.',()=>deleteDoc(D('questions',id)).catch(e=>toast(fmtErr(e),'err')))},
 delK(id){ask('Hapus kelas?',`Kelas ${id} akan dihapus dari daftar (Siswa & Guru tidak akan terhapus otomatis).`,()=>setDoc(D('settings','config'),{classes:S.classes.filter(x=>x!==id)},{merge:true}).then(()=>toast('Kelas dihapus')).catch(e=>toast(fmtErr(e),'err')))},
-delAllQ(){const L=fq();if(!L.length)return;ask('Hapus semua soal yang tampil?',`${L.length} soal pada daftar ini akan dihapus permanen.`,async()=>{try{for(let i=0;i<L.length;i+=400){const b=writeBatch(db);L.slice(i,i+400).forEach(q=>b.delete(D('questions',q.id)));await b.commit()}toast('Soal dihapus')}catch(e){toast(fmtErr(e),'err')}})},
+
+// Manajemen Paket
+newPaket(){
+    const c = String(T.kelas||'').split(',').map(x=>x.trim()).filter(Boolean);
+    $('mp-kelas').innerHTML = c.map(x=>`<label class="flex items-center gap-1.5 cursor-pointer hover:bg-gray-100 p-1 rounded"><input type="checkbox" value="${esc(x)}" class="w-4 h-4 text-blue-600"> <span class="font-medium text-sm">Kelas ${esc(x)}</span></label>`).join('');
+    $('m-paket').classList.replace('hidden', 'flex');
+    $('f-paket').reset();
+},
+closePaket(){ $('m-paket').classList.replace('flex', 'hidden'); },
+openPaket(id){
+    currentPaket = S.packets.find(p => p.id === id);
+    if(!currentPaket) return;
+    $('p-paket-list').classList.add('hidden');
+    $('p-paket-detail').classList.remove('hidden');
+    $('det-paket-name').textContent = currentPaket.name;
+    $('det-paket-kelas').innerHTML = '<i class="fas fa-users mr-1"></i> Kelas ' + currentPaket.classes.join(', ');
+    resetForm();
+    rQ();
+},
+backPaket(){
+    currentPaket = null;
+    $('p-paket-detail').classList.add('hidden');
+    $('p-paket-list').classList.remove('hidden');
+},
+delPaket(id){
+    ask('Hapus Paket?', 'Paket beserta seluruh soal di dalamnya akan dihapus permanen.', async () => {
+        busy('Menghapus paket...');
+        try {
+            const qDel = S.questions.filter(q => q.paketId === id);
+            for(let i=0; i<qDel.length; i+=400) {
+                const b = writeBatch(db);
+                qDel.slice(i, i+400).forEach(q => b.delete(D('questions', q.id)));
+                await b.commit();
+            }
+            await deleteDoc(D('packets', id));
+            toast('Paket dihapus');
+        } catch(e) { toast(fmtErr(e), 'err'); }
+        busy();
+        if (currentPaket?.id === id) act.backPaket();
+    });
+},
+
+delQ(id){ask('Hapus soal?','Soal dihapus permanen.',()=>deleteDoc(D('questions',id)).catch(e=>toast(fmtErr(e),'err')))},
+delAllQ(){
+    if(!currentPaket) return;
+    const L = S.questions.filter(q => q.paketId === currentPaket.id);
+    if(!L.length) return;
+    ask('Kosongkan Paket?', `${L.length} soal pada paket ini akan dihapus permanen.`, async()=>{try{for(let i=0;i<L.length;i+=400){const b=writeBatch(db);L.slice(i,i+400).forEach(q=>b.delete(D('questions',q.id)));await b.commit()}toast('Soal dihapus')}catch(e){toast(fmtErr(e),'err')}})
+},
 reset(id){ask('Reset ujian siswa?','Jawaban & nilai siswa ini dihapus sehingga bisa mengerjakan ulang.',()=>deleteDoc(D('exams',id)).then(()=>toast('Ujian direset')).catch(e=>toast(fmtErr(e),'err')))},
 genTok(){$('c-tok').value=Math.random().toString(36).slice(2,8).toUpperCase()},
 async saveCfg(){const tok=$('c-tok').value.trim().toUpperCase(),dur=parseInt($('c-dur').value),kkm=parseInt($('c-kkm').value),mv=parseInt($('c-viol').value);
@@ -191,7 +272,7 @@ try{const dup=await getDocs(query(C('teachers'),where('token','==',tok)));if(dup
 const d={token:tok,duration:dur,kkm,maxViol:mv,active:$('c-act').checked,shuffle:$('c-shuf').checked,showScore:$('c-show').checked};
 await setDoc(D('teachers',T.username),d,{merge:true});Object.assign(T,d);toast('Pengaturan tersimpan')}catch(e){toast(fmtErr(e),'err')}},
 dlTpl(){dl([{NISN:'1001',Nama:'Budi Santoso',Kelas:'9A'}],'Template Siswa','Template_Siswa.xlsx')},
-dlQTpl(){dl([{Pertanyaan:'Siapa penemu bola lampu?','Opsi A':'Thomas Edison','Opsi B':'Nikola Tesla','Opsi C':'Albert Einstein','Opsi D':'Isaac Newton','Jawaban (A/B/C/D)':'A','Gambar (URL, opsional)':'',Kelas:''}],'Template Soal','Template_Soal.xlsx')},
+dlQTpl(){dl([{Pertanyaan:'Siapa penemu bola lampu?','Opsi A':'Thomas Edison','Opsi B':'Nikola Tesla','Opsi C':'Albert Einstein','Opsi D':'Isaac Newton','Jawaban (A/B/C/D)':'A','Gambar (URL, opsional)':''}],'Template Soal','Template_Soal.xlsx')},
 dlRes(){const r=resRows();if(!r.some(x=>x.e))return toast('Belum ada data','err');dl(r.map(({s,e})=>({NISN:s.nisn,Nama:s.name,Kelas:s.class,Status:st(e),Benar:e?.correct??'',Total:e?.total??'',Nilai:e?.score??'',Keterangan:e?.status==='submitted'?(e.score>=(T.kkm??70)?'Lulus':'Belum lulus'):'',Pelanggaran:e?.violations??''})),'Hasil',`Hasil_${T.mapel}_${T.kelas}.xlsx`.replace(/\s+/g,'_'))},
 ans(i){const q=U.qs[U.i];U.ans[q.id]=+i;renderQ();save()},
 flag(){const q=U.qs[U.i];U.flags[q.id]=!U.flags[q.id];renderQ();save()},
@@ -241,46 +322,65 @@ $('f-pw').addEventListener('submit',async e=>{e.preventDefault();const a=$('pw-1
 // ===== GURU =====
 function openTeacher(){stop();const id=T.username;
 $('t-sub').textContent=`${T.mapel} | Kelas ${T.kelas}`;$('c-tok').value=T.token||'';$('c-dur').value=T.duration||60;$('c-kkm').value=T.kkm??70;$('c-viol').value=T.maxViol??3;$('c-act').checked=!!T.active;$('c-shuf').checked=T.shuffle!==false;$('c-show').checked=T.showScore!==false;
-subs.push(onSnapshot(query(C('questions'),where('teacherId','==',id)),s=>{S.questions=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||''));rQ()},e=>toast(fmtErr(e),'err')));
+subs.push(onSnapshot(query(C('packets'),where('teacherId','==',id)),s=>{S.packets=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));rPaket()},e=>toast(fmtErr(e),'err')));
+subs.push(onSnapshot(query(C('questions'),where('teacherId','==',id)),s=>{S.questions=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||''));rPaket();rQ()},e=>toast(fmtErr(e),'err')));
 subs.push(onSnapshot(query(C('exams'),where('teacherId','==',id)),s=>{S.exams=s.docs.map(d=>({id:d.id,...d.data()}));rR()},e=>toast(fmtErr(e),'err')));
-subs.push(onSnapshot(C('students'),s=>{S.students=s.docs.map(d=>({nisn:d.id,...d.data()}));rR()}));view('v-teacher')}
-const tcl=()=>String(T.kelas||'').split(',').map(x=>x.trim()).filter(Boolean);
-const qcl=q=>Array.isArray(q.kelasList)?q.kelasList:(q.kelas?[q.kelas]:[]);
-const qExp=(q,x)=>qcl(q).some(e=>norm(e)===norm(x));
+subs.push(onSnapshot(C('students'),s=>{S.students=s.docs.map(d=>({nisn:d.id,...d.data()}));rR()}));
+act.backPaket(); view('v-teacher');}
 
-let qF='',kInit=false; // qF='' berarti tab Semua Kelas/Umum aktif
-const fq=()=>S.questions.filter(q=>qF===''?!qcl(q).length:qExp(q,qF));
-const upK=v=>{const a=String(v??'').split(/[,;]/).map(x=>x.trim()).filter(Boolean);if(!a.length)return qF===''?[]:[qF];return a.map(x=>tcl().find(c=>norm(c)===norm(x))||x)};
+$('f-paket').addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = $('mp-name').value.trim();
+    const cls = [...$('mp-kelas').querySelectorAll('input:checked')].map(i=>i.value);
+    if(!cls.length) return toast('Pilih minimal 1 kelas', 'err');
+    busy('Membuat paket...');
+    try {
+        await setDoc(doc(C('packets')), {
+            name, classes: cls, teacherId: T.username, createdAt: new Date().toISOString()
+        });
+        toast('Paket berhasil dibuat');
+        act.closePaket();
+    } catch(x) { toast(fmtErr(x), 'err'); }
+    busy();
+});
 
-function fillK(){
-    const c=tcl();
-    if(!kInit){kInit=true; qF='';} // Set default ke tab "Semua Kelas"
-    
-    // Render Navigation Tabs
-    $('q-class-tabs').innerHTML=
-        `<button data-a="setQF" data-id="" class="px-5 py-2.5 whitespace-nowrap font-bold border-b-4 transition-colors ${qF===''?'border-blue-600 text-blue-700 bg-blue-50/50':'border-transparent text-gray-500 hover:text-blue-600 hover:bg-gray-50'}">Umum (Semua Kelas)</button>` +
-        c.map(x=>`<button data-a="setQF" data-id="${esc(x)}" class="px-5 py-2.5 whitespace-nowrap font-bold border-b-4 transition-colors ${qF===x?'border-blue-600 text-blue-700 bg-blue-50/50':'border-transparent text-gray-500 hover:text-blue-600 hover:bg-gray-50'}">Kelas ${esc(x)}</button>`).join('');
-        
-    // Update target context di form Buat Soal
-    $('q-target-text').innerHTML = qF === '' ? '<i class="fas fa-globe mr-1"></i> Soal ini akan berlaku untuk: <b>Umum (Semua Kelas)</b>' : `<i class="fas fa-users mr-1"></i> Soal ini akan berlaku khusus untuk: <b>Kelas ${esc(qF)}</b>`;
+function rPaket() {
+    if (!T) return;
+    $('paket-list').innerHTML = S.packets.map(p => {
+        const qCount = S.questions.filter(q => q.paketId === p.id).length;
+        return `<div class="card relative hover:border-blue-400 transition-colors shadow-sm">
+            <h4 class="font-bold text-lg text-blue-800">${esc(p.name)}</h4>
+            <p class="text-xs text-gray-500 mt-1 mb-4"><i class="fas fa-users mr-1"></i> Kelas ${esc(p.classes.join(', '))}</p>
+            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full"><i class="fas fa-file-alt mr-1"></i> ${qCount} Soal</span>
+            <div class="mt-5 flex gap-2">
+                <button data-a="openPaket" data-id="${esc(p.id)}" class="btn flex-1 !py-2 text-sm"><i class="fas fa-folder-open mr-1"></i> Kelola Soal</button>
+                <button data-a="delPaket" data-id="${esc(p.id)}" class="btn2 !bg-red-50 !text-red-600 hover:!bg-red-100 !py-2 text-sm px-3" title="Hapus Paket"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('') || '<div class="col-span-full text-center text-gray-400 py-10 border-2 border-dashed rounded-xl"><i class="fas fa-box-open text-4xl mb-3 opacity-50 block"></i>Belum ada paket soal.<br>Klik "Buat Paket Baru" untuk mulai.</div>';
 }
 
-function rQ(){fillK();const L=fq();$('cnt-q').textContent=L.length;$('q-list').innerHTML=L.map((q,i)=>`<div class="border rounded-lg p-3 bg-gray-50 relative"><div class="absolute top-2 right-3 flex gap-3"><button data-a="editQ" data-id="${esc(q.id)}" class="text-blue-500" title="Edit"><i class="fas fa-pen"></i></button><button data-a="delQ" data-id="${esc(q.id)}" class="text-gray-400 hover:text-red-500" title="Hapus"><i class="fas fa-times"></i></button></div><p class="text-sm font-medium pr-16 mb-1 whitespace-pre-wrap"><span class="text-xs px-2 py-0.5 rounded-full ${qcl(q).length?'bg-blue-100 text-blue-700':'bg-gray-200 text-gray-600'} mr-1 align-middle">${qcl(q).length?'Kelas '+esc(qcl(q).join(', ')):'Semua Kelas (Umum)'}</span>${i+1}. ${esc(q.text)}</p>${q.image?`<img src="${esc(q.image)}" class="max-h-32 my-1 rounded border">`:''}${q.options.map((o,j)=>`<div class="text-sm ${q.answer===j?'text-green-700 font-semibold':'text-gray-600'}">${'ABCD'[j]}. ${esc(o)}${q.answer===j?' ✓':''}${oimg(q,j,'max-h-16')}</div>`).join('')}</div>`).join('')||'<p class="text-center text-gray-400 text-sm py-6">Belum ada soal.</p>'}
+function rQ(){
+    if (!currentPaket) return;
+    const L = S.questions.filter(q => q.paketId === currentPaket.id);
+    $('cnt-q').textContent = L.length;
+    $('q-list').innerHTML = L.map((q,i)=>`<div class="border rounded-lg p-4 bg-gray-50 relative"><div class="absolute top-3 right-3 flex gap-3"><button data-a="editQ" data-id="${esc(q.id)}" class="text-blue-500" title="Edit"><i class="fas fa-pen"></i></button><button data-a="delQ" data-id="${esc(q.id)}" class="text-gray-400 hover:text-red-500" title="Hapus"><i class="fas fa-times"></i></button></div><p class="text-sm font-medium pr-16 mb-2 whitespace-pre-wrap">${i+1}. ${esc(q.text)}</p>${q.image?`<img src="${esc(q.image)}" class="max-h-32 my-2 rounded border">`:''}${q.options.map((o,j)=>`<div class="text-sm ${q.answer===j?'text-green-700 font-bold bg-green-50 p-1 rounded':'text-gray-600 pl-1'}">${'ABCD'[j]}. ${esc(o)}${q.answer===j?' ✓':''}${oimg(q,j,'max-h-16 mt-1')}</div>`).join('')}</div>`).join('')||'<p class="text-center text-gray-400 text-sm py-8"><i class="fas fa-clipboard-list text-3xl mb-2 opacity-50 block"></i>Belum ada soal di paket ini.</p>'
+}
+
 $('f-q').addEventListener('submit',async e=>{e.preventDefault();const o=[0,1,2,3].map(i=>$('q-'+i).value.trim());
+if(!currentPaket) return toast('Pilih atau buat paket soal terlebih dahulu', 'err');
 if([0,1,2,3].some(i=>!o[i]&&!oImg[i]))return toast('Setiap opsi harus berisi teks atau gambar','err');
 
-let targetKelas = qF === '' ? [] : [qF];
-if(editId){
-    const existing = S.questions.find(x=>x.id===editId);
-    if(existing) targetKelas = existing.kelasList || []; // Pertahankan target kelas bawaannya
-}
-
-const d={text:$('q-t').value,options:o,optImages:oImg.map(x=>x||null),answer:+$('q-a').value,image:qImg||null,kelasList:targetKelas,kelas:null,teacherId:T.username};
+const d={text:$('q-t').value,options:o,optImages:oImg.map(x=>x||null),answer:+$('q-a').value,image:qImg||null,paketId:currentPaket.id,teacherId:T.username};
 busy('Menyimpan soal...');try{if(editId){await setDoc(D('questions',editId),{...d,updatedAt:new Date().toISOString()},{merge:true});toast('Soal diperbarui')}else{await setDoc(doc(C('questions')),{...d,createdAt:new Date().toISOString()});toast('Soal ditambahkan')}resetForm()}catch(x){toast(fmtErr(x),'err')}busy()});
-$('up-q').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{busy('Memproses file...');const rows=await readXlsx(f),items=[],m={a:0,b:1,c:2,d:3};
+
+$('up-q').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;
+if(!currentPaket) return toast('Buka salah satu paket soal terlebih dahulu', 'err');
+try{busy('Memproses file...');const rows=await readXlsx(f),items=[],m={a:0,b:1,c:2,d:3};
 rows.forEach(r=>{const t=g(r,'pertanyaan'),o=['opsi a','opsi b','opsi c','opsi d'].map(k=>g(r,k)),a=m[norm(g(r,'jawaban (a/b/c/d)','jawaban'))],iu=String(g(r,'gambar (url, opsional)','gambar (url)','gambar')||'').trim();
-if(t&&o.every(x=>x!==undefined&&x!=='')&&a!==undefined)items.push([doc(C('questions')),{text:String(t),options:o.map(String),answer:a,image:/^https?:\/\//i.test(iu)?iu:null,kelasList:upK(g(r,'kelas','class')),teacherId:T.username,createdAt:new Date().toISOString()}])});
+if(t&&o.every(x=>x!==undefined&&x!=='')&&a!==undefined)items.push([doc(C('questions')),{text:String(t),options:o.map(String),answer:a,image:/^https?:\/\//i.test(iu)?iu:null,paketId:currentPaket.id,teacherId:T.username,createdAt:new Date().toISOString()}])});
 if(!items.length)return toast('Tidak ada baris valid (jawaban harus A/B/C/D).','err');await batchSet(items);toast(`${items.length} soal diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
+
 let qImg=null;
 const shrink=(f,max=900,lim=400000)=>new Promise((ok,no)=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{let k=Math.min(1,max/Math.max(im.width,im.height)),q=.8,d;const c=document.createElement('canvas'),x=c.getContext('2d');URL.revokeObjectURL(u);for(let n=0;n<6;n++){c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);d=c.toDataURL('image/jpeg',q);if(d.length<=lim)return ok(d);q=Math.max(.4,q-.1);k*=.8}no()};im.onerror=no;im.src=u});
 act.clrImg=()=>{qImg=null;$('q-img').value='';$('q-prev').classList.add('hidden');$('q-clr').classList.add('hidden')};
@@ -296,15 +396,12 @@ const resetForm=()=>{
     $('f-q').reset();
     act.clrImg();
     [0,1,2,3].forEach(i=>act.clrO(i));
-    $('q-title').textContent='Buat Soal';
+    $('q-title').textContent='Buat Soal Manual';
     $('q-sub').textContent='Tambah Soal';
     $('q-cancel').classList.add('hidden');
-    $('q-target-text').innerHTML = qF === '' ? '<i class="fas fa-globe mr-1"></i> Soal ini akan berlaku untuk: <b>Umum (Semua Kelas)</b>' : `<i class="fas fa-users mr-1"></i> Soal ini akan berlaku khusus untuk: <b>Kelas ${esc(qF)}</b>`;
 };
 act.cancelEdit=resetForm;
 act.editQ=id=>{const q=S.questions.find(x=>x.id===id);if(!q)return;editId=id;$('q-t').value=q.text;[0,1,2,3].forEach(i=>{$('q-'+i).value=q.options[i]||'';oImg[i]=q.optImages?.[i]||null;$('o-img-'+i).value='';showImg('o-prev-'+i,'o-clr-'+i,oImg[i])});$('q-a').value=q.answer;qImg=q.image||null;$('q-img').value='';showImg('q-prev','q-clr',qImg);$('q-title').textContent='Edit Soal';$('q-sub').textContent='Simpan Perubahan';$('q-cancel').classList.remove('hidden');
-const kl = qcl(q);
-$('q-target-text').innerHTML = kl.length ? `<i class="fas fa-users mr-1"></i> Diedit untuk: <b>Kelas ${esc(kl.join(', '))}</b>` : '<i class="fas fa-globe mr-1"></i> Diedit untuk: <b>Umum (Semua Kelas)</b>';
 $('f-q').scrollIntoView({behavior:'smooth'})};
 const st=e=>!e?'Belum mulai':e.status==='submitted'?'Selesai':'Mengerjakan';
 function resRows(){const cl=classes(T);return S.students.filter(s=>cl.some(e=>cm(e,s.class))).sort((a,b)=>norm(a.class).localeCompare(norm(b.class))||norm(a.name).localeCompare(norm(b.name))).map(s=>({s,e:S.exams.find(x=>x.nisn===s.nisn)}))}
@@ -325,8 +422,17 @@ const sd=await getDoc(D('students',nisn));if(!sd.exists())throw 'NISN tidak terd
 const s={nisn,...sd.data()};if(!classes(t).some(e=>cm(e,s.class)))throw `Ujian ini khusus kelas ${t.kelas}.`;
 const id=`${nisn}_${t.username}`,es=await getDoc(D('exams',id)),ex=es.exists()?es.data():{};
 if(ex.status==='submitted')throw 'Anda sudah mengumpulkan ujian ini.';
-const qs=await getDocs(query(C('questions'),where('teacherId','==',t.username)));if(qs.empty)throw 'Soal belum tersedia. Hubungi guru.';
-const rnd=seed(id);let list=qs.docs.map(d=>({id:d.id,...d.data()})).filter(q=>!qcl(q).length||qcl(q).some(e=>cm(e,s.class))).sort((a,b)=>a.id.localeCompare(b.id));if(!list.length)throw `Soal untuk kelas ${s.class} belum tersedia. Hubungi guru.`;
+
+// Ambil paket soal yg sesuai untuk kelas siswa ini
+const ps = await getDocs(query(C('packets'),where('teacherId','==',t.username)));
+const validPids = ps.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.classes.some(c=>cm(c,s.class))).map(p=>p.id);
+
+const qs=await getDocs(query(C('questions'),where('teacherId','==',t.username)));
+if(qs.empty || !validPids.length)throw `Soal belum tersedia untuk kelas ${s.class}. Hubungi guru.`;
+const rnd=seed(id);
+let list=qs.docs.map(d=>({id:d.id,...d.data()})).filter(q=>validPids.includes(q.paketId)).sort((a,b)=>a.id.localeCompare(b.id));
+if(!list.length)throw `Soal belum tersedia untuk kelas ${s.class}. Hubungi guru.`;
+
 const sh=t.shuffle!==false;if(sh)list=shuf(list,rnd);list.forEach(q=>q.ord=sh?shuf([0,1,2,3],rnd):[0,1,2,3]);
 const startedAt=ex.startedAt||Date.now();
 U={on:true,id,t,s,qs:list,i:0,ans:ex.answers||{},flags:ex.flags||{},viol:ex.violations||0,end:startedAt+(t.duration||60)*60000,maxV:t.maxViol||3,dirty:false,hid:false};
