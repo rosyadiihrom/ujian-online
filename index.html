@@ -17,6 +17,18 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f3f4f6;color:#1f
 th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@apply px-3 py-2}
 .exam{user-select:none}
 @keyframes ld{0%{margin-left:-50%}100%{margin-left:100%}}
+@media print {
+    body { background: white; color: black; }
+    body * { visibility: hidden; }
+    #t-hasil, #t-hasil * { visibility: visible; }
+    #t-hasil { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+    #print-header { display: block !important; visibility: visible; margin-bottom: 20px;}
+    .no-print, button, select { display: none !important; }
+    .card { box-shadow: none; border: none; padding: 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f3f4f6; }
+}
 </style></head>
 <body>
 <div id="loader" class="fixed inset-0 z-[100] bg-gradient-to-br from-blue-700 to-indigo-800 text-white flex flex-col items-center justify-center p-6 text-center">
@@ -96,30 +108,40 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <nav class="bg-white border-b px-4 flex gap-6"><button data-a="tab" data-id="t-ujian" class="tb t-t on">Manajemen Ujian</button><button data-a="tab" data-id="t-hasil" class="tb t-t">Hasil Siswa</button></nav>
 <div class="max-w-5xl mx-auto p-4 md:p-6">
 <div id="t-ujian" class="p-t space-y-5">
-<!-- Pengaturan Global -->
-<div class="card"><h3 class="font-bold mb-3">Pengaturan Ujian</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-<div><label class="lbl">Token</label><div class="flex gap-1"><input id="c-tok" class="inp font-mono uppercase"><button data-a="genTok" class="btn2" title="Acak"><i class="fas fa-dice"></i></button></div></div>
-<div><label class="lbl">Durasi (menit)</label><input id="c-dur" type="number" min="5" class="inp"></div>
-<div><label class="lbl">KKM (nilai lulus)</label><input id="c-kkm" type="number" min="0" max="100" class="inp"></div>
-<div><label class="lbl">Batas pelanggaran</label><input id="c-viol" type="number" min="1" class="inp"></div></div>
-<div class="flex flex-wrap gap-5 mt-3 text-sm"><label><input type="checkbox" id="c-act"> <b>Ujian dibuka</b> (Siswa bisa masuk)</label><label><input type="checkbox" id="c-shuf"> Acak soal & opsi</label><label><input type="checkbox" id="c-show"> Tampilkan nilai ke siswa</label><button data-a="saveCfg" class="btn ml-auto bg-green-600 hover:bg-green-700"><i class="fas fa-save mr-1"></i>Simpan</button></div></div>
 
 <!-- STATE 1: DAFTAR PAKET -->
 <div id="p-paket-list" class="space-y-4">
     <div class="flex justify-between items-center pb-2 border-b">
-        <h3 class="font-bold text-lg">Daftar Paket Soal</h3>
-        <button data-a="newPaket" class="btn"><i class="fas fa-plus mr-1"></i>Buat Paket Baru</button>
+        <h3 class="font-bold text-lg">Daftar Paket Ujian</h3>
+        <button data-a="newPaket" class="btn bg-green-600 hover:bg-green-700"><i class="fas fa-plus mr-1"></i>Buat Paket Baru</button>
     </div>
     <div id="paket-list" class="grid md:grid-cols-3 gap-5 mt-4"></div>
 </div>
 
-<!-- STATE 2: DETAIL PAKET (BUAT SOAL) -->
-<div id="p-paket-detail" class="hidden">
-    <div class="flex items-center gap-4 mb-6 border-b pb-4">
+<!-- STATE 2: DETAIL PAKET (PENGATURAN & SOAL) -->
+<div id="p-paket-detail" class="hidden space-y-6">
+    <div class="flex items-center gap-4 border-b pb-4">
         <button data-a="backPaket" class="text-gray-500 hover:text-blue-600 bg-gray-100 p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors"><i class="fas fa-arrow-left text-xl"></i></button>
         <div>
             <h3 id="det-paket-name" class="font-bold text-xl text-blue-800">Nama Paket</h3>
             <p id="det-paket-kelas" class="text-sm font-semibold text-gray-500 mt-0.5"><i class="fas fa-users mr-1"></i>Kelas</p>
+        </div>
+    </div>
+    
+    <!-- Pengaturan Per-Paket -->
+    <div class="card bg-green-50/50 border-green-200">
+        <h3 class="font-bold mb-3 text-green-900"><i class="fas fa-cog mr-1"></i> Pengaturan Akses & Waktu Ujian</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div><label class="lbl">Token</label><div class="flex gap-1"><input id="c-tok" class="inp font-mono uppercase bg-white"><button data-a="genTok" class="btn2 !bg-white border" title="Acak"><i class="fas fa-dice"></i></button></div></div>
+            <div><label class="lbl">Durasi (menit)</label><input id="c-dur" type="number" min="5" class="inp bg-white"></div>
+            <div><label class="lbl">KKM (nilai lulus)</label><input id="c-kkm" type="number" min="0" max="100" class="inp bg-white"></div>
+            <div><label class="lbl">Batas pelanggaran</label><input id="c-viol" type="number" min="1" class="inp bg-white"></div>
+        </div>
+        <div class="flex flex-wrap items-center gap-5 mt-4 text-sm">
+            <label class="flex items-center gap-1.5 font-bold text-green-800"><input type="checkbox" id="c-act" class="w-4 h-4 text-green-600"> Ujian dibuka (Siswa bisa login)</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="c-shuf" class="w-4 h-4 text-green-600"> Acak soal & opsi</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="c-show" class="w-4 h-4 text-green-600"> Tampilkan nilai ke siswa</label>
+            <button data-a="saveCfg" class="btn ml-auto bg-green-600 hover:bg-green-700 shadow-sm"><i class="fas fa-save mr-1"></i>Simpan Pengaturan</button>
         </div>
     </div>
     
@@ -140,9 +162,33 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 </div>
 <!-- END T-UJIAN -->
 
-<div id="t-hasil" class="p-t hidden"><div class="card"><div class="flex justify-between items-center mb-3"><h3 class="font-bold">Hasil Ujian</h3><button data-a="dlRes" class="btn bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel mr-1"></i>Export Excel</button></div>
-<div id="stats" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4"></div>
-<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th>NISN</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Benar</th><th>Nilai</th><th>Pelanggaran</th><th></th></tr></thead><tbody id="tb-r" class="divide-y"></tbody></table></div></div></div>
+<div id="t-hasil" class="p-t hidden">
+    <div class="card">
+        <div id="print-header" class="hidden">
+            <h2 class="text-2xl font-bold text-center">Laporan Hasil Ujian</h2>
+            <p id="print-paket-name" class="text-center text-gray-600 font-semibold mt-1 mb-4"></p>
+        </div>
+        
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-3 no-print">
+            <div class="flex items-center gap-3">
+                <h3 class="font-bold">Hasil Ujian</h3>
+                <select id="r-paket-sel" class="inp py-1 text-sm max-w-[250px]"><option value="">-- Pilih Paket Ujian --</option></select>
+            </div>
+            <div class="flex gap-2">
+                <button data-a="printRes" class="btn2 bg-gray-100 text-gray-700 hover:bg-gray-200 border"><i class="fas fa-print mr-1"></i> Cetak / PDF</button>
+                <button data-a="dlRes" class="btn bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel mr-1"></i> Excel</button>
+            </div>
+        </div>
+        
+        <div id="stats" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 no-print"></div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead><tr><th class="border-b">NISN</th><th class="border-b">Nama</th><th class="border-b">Kelas</th><th class="border-b">Status</th><th class="border-b">Benar</th><th class="border-b">Nilai</th><th class="border-b">Pelanggaran</th><th class="no-print"></th></tr></thead>
+                <tbody id="tb-r" class="divide-y"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 </div></main>
 
 <!-- EXAM -->
@@ -231,6 +277,16 @@ openPaket(id){
     $('p-paket-detail').classList.remove('hidden');
     $('det-paket-name').textContent = currentPaket.name;
     $('det-paket-kelas').innerHTML = '<i class="fas fa-users mr-1"></i> Kelas ' + currentPaket.classes.join(', ');
+    
+    // Load Settings
+    $('c-tok').value = currentPaket.token || '';
+    $('c-dur').value = currentPaket.duration || 60;
+    $('c-kkm').value = currentPaket.kkm ?? 70;
+    $('c-viol').value = currentPaket.maxViol ?? 3;
+    $('c-act').checked = !!currentPaket.active;
+    $('c-shuf').checked = currentPaket.shuffle !== false;
+    $('c-show').checked = currentPaket.showScore !== false;
+    
     resetForm();
     rQ();
 },
@@ -266,14 +322,36 @@ delAllQ(){
 },
 reset(id){ask('Reset ujian siswa?','Jawaban & nilai siswa ini dihapus sehingga bisa mengerjakan ulang.',()=>deleteDoc(D('exams',id)).then(()=>toast('Ujian direset')).catch(e=>toast(fmtErr(e),'err')))},
 genTok(){$('c-tok').value=Math.random().toString(36).slice(2,8).toUpperCase()},
-async saveCfg(){const tok=$('c-tok').value.trim().toUpperCase(),dur=parseInt($('c-dur').value),kkm=parseInt($('c-kkm').value),mv=parseInt($('c-viol').value);
-if(!tok)return toast('Token wajib diisi','err');if(!(dur>=5))return toast('Durasi minimal 5 menit','err');if(isNaN(kkm)||kkm<0||kkm>100)return toast('KKM 0-100','err');if(!(mv>=1))return toast('Batas pelanggaran minimal 1','err');
-try{const dup=await getDocs(query(C('teachers'),where('token','==',tok)));if(dup.docs.some(d=>d.id!==T.username))return toast('Token sudah dipakai guru lain','err');
-const d={token:tok,duration:dur,kkm,maxViol:mv,active:$('c-act').checked,shuffle:$('c-shuf').checked,showScore:$('c-show').checked};
-await setDoc(D('teachers',T.username),d,{merge:true});Object.assign(T,d);toast('Pengaturan tersimpan')}catch(e){toast(fmtErr(e),'err')}},
+
+// Simpan pengaturan spesifik paket
+async saveCfg(){
+    if(!currentPaket) return;
+    const tok=$('c-tok').value.trim().toUpperCase(),dur=parseInt($('c-dur').value),kkm=parseInt($('c-kkm').value),mv=parseInt($('c-viol').value);
+    if(!tok)return toast('Token wajib diisi','err');if(!(dur>=5))return toast('Durasi minimal 5 menit','err');if(isNaN(kkm)||kkm<0||kkm>100)return toast('KKM 0-100','err');if(!(mv>=1))return toast('Batas pelanggaran minimal 1','err');
+    
+    try {
+        const dup=await getDocs(query(C('packets'),where('token','==',tok)));
+        if(dup.docs.some(d=>d.id!==currentPaket.id)) return toast('Token sudah dipakai pada paket lain','err');
+        
+        const d={token:tok,duration:dur,kkm,maxViol:mv,active:$('c-act').checked,shuffle:$('c-shuf').checked,showScore:$('c-show').checked};
+        await setDoc(D('packets',currentPaket.id), d, {merge:true});
+        Object.assign(currentPaket, d);
+        toast('Pengaturan tersimpan');
+    } catch(e) { toast(fmtErr(e),'err'); }
+},
+
 dlTpl(){dl([{NISN:'1001',Nama:'Budi Santoso',Kelas:'9A'}],'Template Siswa','Template_Siswa.xlsx')},
 dlQTpl(){dl([{Pertanyaan:'Siapa penemu bola lampu?','Opsi A':'Thomas Edison','Opsi B':'Nikola Tesla','Opsi C':'Albert Einstein','Opsi D':'Isaac Newton','Jawaban (A/B/C/D)':'A','Gambar (URL, opsional)':''}],'Template Soal','Template_Soal.xlsx')},
-dlRes(){const r=resRows();if(!r.some(x=>x.e))return toast('Belum ada data','err');dl(r.map(({s,e})=>({NISN:s.nisn,Nama:s.name,Kelas:s.class,Status:st(e),Benar:e?.correct??'',Total:e?.total??'',Nilai:e?.score??'',Keterangan:e?.status==='submitted'?(e.score>=(T.kkm??70)?'Lulus':'Belum lulus'):'',Pelanggaran:e?.violations??''})),'Hasil',`Hasil_${T.mapel}_${T.kelas}.xlsx`.replace(/\s+/g,'_'))},
+dlRes(){
+    const r=resRows();
+    if(!r.length || !r.some(x=>x.e)) return toast('Belum ada data nilai pada paket ini','err');
+    const pkt = r[0].pkt;
+    dl(r.map(({s,e})=>({NISN:s.nisn,Nama:s.name,Kelas:s.class,Status:st(e),Benar:e?.correct??'',Total:e?.total??'',Nilai:e?.score??'',Keterangan:e?.status==='submitted'?(e.score>=(pkt.kkm??70)?'Lulus':'Belum lulus'):'',Pelanggaran:e?.violations??''})),'Hasil',`Hasil_${pkt.name}_${pkt.classes.join('-')}.xlsx`.replace(/\s+/g,'_'));
+},
+printRes(){
+    if(!$('r-paket-sel').value) return toast('Pilih paket ujian terlebih dahulu', 'err');
+    window.print();
+},
 ans(i){const q=U.qs[U.i];U.ans[q.id]=+i;renderQ();save()},
 flag(){const q=U.qs[U.i];U.flags[q.id]=!U.flags[q.id];renderQ();save()},
 go(i){U.i=+i;renderQ()},prev(){if(U.i>0){U.i--;renderQ()}},next(){if(U.i<U.qs.length-1){U.i++;renderQ()}},
@@ -315,13 +393,13 @@ if(newClasses.length){const c=[...new Set([...S.classes,...newClasses])].sort();
 toast(`${items.length} siswa diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
 $('f-addT').addEventListener('submit',async e=>{e.preventDefault();const u=$('at-u').value.trim();const kls=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value).join(',');if(!kls)return toast('Pilih minimal 1 kelas untuk guru ini.','err');
 try{if((await getDoc(D('teachers',u))).exists())return toast('Username sudah dipakai','err');
-await setDoc(D('teachers',u),{name:$('at-n').value.trim(),mapel:$('at-m').value.trim(),kelas:kls,passHash:await sha($('at-p').value),token:Math.random().toString(36).slice(2,8).toUpperCase(),duration:60,kkm:70,maxViol:3,active:false,shuffle:true,showScore:true,createdAt:new Date().toISOString()});toast('Guru ditambahkan');e.target.reset();$('at-k-list').querySelectorAll('input').forEach(i=>i.checked=false)}catch(x){toast(fmtErr(x),'err')}});
+await setDoc(D('teachers',u),{name:$('at-n').value.trim(),mapel:$('at-m').value.trim(),kelas:kls,passHash:await sha($('at-p').value),createdAt:new Date().toISOString()});toast('Guru ditambahkan');e.target.reset();$('at-k-list').querySelectorAll('input').forEach(i=>i.checked=false)}catch(x){toast(fmtErr(x),'err')}});
 $('f-addK').addEventListener('submit',async e=>{e.preventDefault();const n=$('ak-n').value.trim();if(!n)return;try{const c=[...new Set([...S.classes,n])].sort();await setDoc(D('settings','config'),{classes:c},{merge:true});toast('Kelas ditambahkan');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
 $('f-pw').addEventListener('submit',async e=>{e.preventDefault();const a=$('pw-1').value;if(a!==$('pw-2').value)return toast('Password tidak sama','err');try{const h=await sha(a);await setDoc(D('settings','config'),{adminHash:h},{merge:true});store.set({role:'admin',h});toast('Password diganti');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
 
 // ===== GURU =====
 function openTeacher(){stop();const id=T.username;
-$('t-sub').textContent=`${T.mapel} | Kelas ${T.kelas}`;$('c-tok').value=T.token||'';$('c-dur').value=T.duration||60;$('c-kkm').value=T.kkm??70;$('c-viol').value=T.maxViol??3;$('c-act').checked=!!T.active;$('c-shuf').checked=T.shuffle!==false;$('c-show').checked=T.showScore!==false;
+$('t-sub').textContent=`${T.mapel} | Kelas ${T.kelas}`;
 subs.push(onSnapshot(query(C('packets'),where('teacherId','==',id)),s=>{S.packets=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));rPaket()},e=>toast(fmtErr(e),'err')));
 subs.push(onSnapshot(query(C('questions'),where('teacherId','==',id)),s=>{S.questions=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||''));rPaket();rQ()},e=>toast(fmtErr(e),'err')));
 subs.push(onSnapshot(query(C('exams'),where('teacherId','==',id)),s=>{S.exams=s.docs.map(d=>({id:d.id,...d.data()}));rR()},e=>toast(fmtErr(e),'err')));
@@ -336,7 +414,9 @@ $('f-paket').addEventListener('submit', async e => {
     busy('Membuat paket...');
     try {
         await setDoc(doc(C('packets')), {
-            name, classes: cls, teacherId: T.username, createdAt: new Date().toISOString()
+            name, classes: cls, teacherId: T.username, createdAt: new Date().toISOString(),
+            token: Math.random().toString(36).slice(2,8).toUpperCase(),
+            duration: 60, kkm: 70, maxViol: 3, active: false, shuffle: true, showScore: true
         });
         toast('Paket berhasil dibuat');
         act.closePaket();
@@ -348,23 +428,33 @@ function rPaket() {
     if (!T) return;
     $('paket-list').innerHTML = S.packets.map(p => {
         const qCount = S.questions.filter(q => q.paketId === p.id).length;
+        const status = p.active ? '<span class="text-green-600 font-bold"><i class="fas fa-unlock text-xs"></i> Aktif</span>' : '<span class="text-gray-400 font-bold"><i class="fas fa-lock text-xs"></i> Ditutup</span>';
         return `<div class="card relative hover:border-blue-400 transition-colors shadow-sm">
-            <h4 class="font-bold text-lg text-blue-800">${esc(p.name)}</h4>
-            <p class="text-xs text-gray-500 mt-1 mb-4"><i class="fas fa-users mr-1"></i> Kelas ${esc(p.classes.join(', '))}</p>
-            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full"><i class="fas fa-file-alt mr-1"></i> ${qCount} Soal</span>
-            <div class="mt-5 flex gap-2">
-                <button data-a="openPaket" data-id="${esc(p.id)}" class="btn flex-1 !py-2 text-sm"><i class="fas fa-folder-open mr-1"></i> Kelola Soal</button>
+            <h4 class="font-bold text-lg text-blue-800 pr-10">${esc(p.name)}</h4>
+            <p class="text-xs text-gray-500 mt-1 mb-2"><i class="fas fa-users mr-1"></i> Kelas ${esc(p.classes.join(', '))}</p>
+            <div class="flex gap-2 text-xs mb-4">
+                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-full"><i class="fas fa-file-alt mr-1"></i> ${qCount} Soal</span>
+                <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">K: ${esc(p.token)}</span>
+                ${status}
+            </div>
+            <div class="mt-4 flex gap-2">
+                <button data-a="openPaket" data-id="${esc(p.id)}" class="btn flex-1 !py-2 text-sm"><i class="fas fa-cog mr-1"></i> Kelola Paket</button>
                 <button data-a="delPaket" data-id="${esc(p.id)}" class="btn2 !bg-red-50 !text-red-600 hover:!bg-red-100 !py-2 text-sm px-3" title="Hapus Paket"><i class="fas fa-trash"></i></button>
             </div>
         </div>`;
     }).join('') || '<div class="col-span-full text-center text-gray-400 py-10 border-2 border-dashed rounded-xl"><i class="fas fa-box-open text-4xl mb-3 opacity-50 block"></i>Belum ada paket soal.<br>Klik "Buat Paket Baru" untuk mulai.</div>';
+    
+    const sId = $('r-paket-sel').value;
+    $('r-paket-sel').innerHTML = '<option value="">-- Pilih Paket Ujian --</option>' + S.packets.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    if(S.packets.some(p => p.id === sId)) $('r-paket-sel').value = sId;
+    rR();
 }
 
 function rQ(){
     if (!currentPaket) return;
     const L = S.questions.filter(q => q.paketId === currentPaket.id);
     $('cnt-q').textContent = L.length;
-    $('q-list').innerHTML = L.map((q,i)=>`<div class="border rounded-lg p-4 bg-gray-50 relative"><div class="absolute top-3 right-3 flex gap-3"><button data-a="editQ" data-id="${esc(q.id)}" class="text-blue-500" title="Edit"><i class="fas fa-pen"></i></button><button data-a="delQ" data-id="${esc(q.id)}" class="text-gray-400 hover:text-red-500" title="Hapus"><i class="fas fa-times"></i></button></div><p class="text-sm font-medium pr-16 mb-2 whitespace-pre-wrap">${i+1}. ${esc(q.text)}</p>${q.image?`<img src="${esc(q.image)}" class="max-h-32 my-2 rounded border">`:''}${q.options.map((o,j)=>`<div class="text-sm ${q.answer===j?'text-green-700 font-bold bg-green-50 p-1 rounded':'text-gray-600 pl-1'}">${'ABCD'[j]}. ${esc(o)}${q.answer===j?' ✓':''}${oimg(q,j,'max-h-16 mt-1')}</div>`).join('')}</div>`).join('')||'<p class="text-center text-gray-400 text-sm py-8"><i class="fas fa-clipboard-list text-3xl mb-2 opacity-50 block"></i>Belum ada soal di paket ini.</p>'
+    $('q-list').innerHTML = L.map((q,i)=>`<div class="border rounded-lg p-4 bg-white relative shadow-sm"><div class="absolute top-3 right-3 flex gap-3"><button data-a="editQ" data-id="${esc(q.id)}" class="text-blue-500" title="Edit"><i class="fas fa-pen"></i></button><button data-a="delQ" data-id="${esc(q.id)}" class="text-gray-400 hover:text-red-500" title="Hapus"><i class="fas fa-times"></i></button></div><p class="text-sm font-medium pr-16 mb-2 whitespace-pre-wrap">${i+1}. ${esc(q.text)}</p>${q.image?`<img src="${esc(q.image)}" class="max-h-32 my-2 rounded border">`:''}${q.options.map((o,j)=>`<div class="text-sm ${q.answer===j?'text-green-700 font-bold bg-green-50 p-1 rounded':'text-gray-600 pl-1'}">${'ABCD'[j]}. ${esc(o)}${q.answer===j?' ✓':''}${oimg(q,j,'max-h-16 mt-1')}</div>`).join('')}</div>`).join('')||'<p class="text-center text-gray-400 text-sm py-8"><i class="fas fa-clipboard-list text-3xl mb-2 opacity-50 block"></i>Belum ada soal di paket ini.</p>'
 }
 
 $('f-q').addEventListener('submit',async e=>{e.preventDefault();const o=[0,1,2,3].map(i=>$('q-'+i).value.trim());
@@ -404,41 +494,66 @@ act.cancelEdit=resetForm;
 act.editQ=id=>{const q=S.questions.find(x=>x.id===id);if(!q)return;editId=id;$('q-t').value=q.text;[0,1,2,3].forEach(i=>{$('q-'+i).value=q.options[i]||'';oImg[i]=q.optImages?.[i]||null;$('o-img-'+i).value='';showImg('o-prev-'+i,'o-clr-'+i,oImg[i])});$('q-a').value=q.answer;qImg=q.image||null;$('q-img').value='';showImg('q-prev','q-clr',qImg);$('q-title').textContent='Edit Soal';$('q-sub').textContent='Simpan Perubahan';$('q-cancel').classList.remove('hidden');
 $('f-q').scrollIntoView({behavior:'smooth'})};
 const st=e=>!e?'Belum mulai':e.status==='submitted'?'Selesai':'Mengerjakan';
-function resRows(){const cl=classes(T);return S.students.filter(s=>cl.some(e=>cm(e,s.class))).sort((a,b)=>norm(a.class).localeCompare(norm(b.class))||norm(a.name).localeCompare(norm(b.name))).map(s=>({s,e:S.exams.find(x=>x.nisn===s.nisn)}))}
-function rR(){if(!T||!$('tb-r'))return;const r=resRows(),done=r.filter(x=>x.e?.status==='submitted'),sc=done.map(x=>x.e.score),kkm=T.kkm??70;
-const box=(l,v)=>`<div class="bg-gray-50 border rounded-lg p-3 text-center"><p class="text-xs text-gray-500">${l}</p><p class="text-xl font-bold">${v}</p></div>`;
-$('stats').innerHTML=box('Peserta',r.length)+box('Selesai',done.length)+box('Rata-rata',sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):'-')+box('Tertinggi / Terendah',sc.length?`${Math.max(...sc)} / ${Math.min(...sc)}`:'-')+box('Lulus',sc.length?`${sc.filter(x=>x>=kkm).length}/${sc.length}`:'-');
-const bd={'Belum mulai':'bg-gray-100 text-gray-600','Mengerjakan':'bg-yellow-100 text-yellow-700','Selesai':'bg-green-100 text-green-700'};
-$('tb-r').innerHTML=r.map(({s,e})=>`<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td><span class="px-2 py-1 rounded-lg text-xs font-bold ${bd[st(e)]}">${st(e)}</span></td><td>${e?.status==='submitted'?`${e.correct}/${e.total}`:'-'}</td><td class="font-bold ${e?.score>=kkm?'text-green-600':'text-red-600'}">${e?.status==='submitted'?e.score:'-'}</td><td>${e?.violations?`<span class="text-red-600 font-semibold">${e.violations}</span>`:'0'}</td><td>${e?`<button data-a="reset" data-id="${esc(e.id)}" class="text-xs text-red-600 underline">Reset</button>`:''}</td></tr>`).join('')||'<tr><td colspan="8" class="text-center text-gray-400 py-4">Belum ada siswa di kelas Anda.</td></tr>'}
+
+function resRows(){
+    const pId = $('r-paket-sel').value;
+    if(!pId) return [];
+    const pkt = S.packets.find(p => p.id === pId);
+    if(!pkt) return [];
+    return S.students.filter(s => pkt.classes.some(e => cm(e, s.class))).sort((a,b)=>norm(a.class).localeCompare(norm(b.class))||norm(a.name).localeCompare(norm(b.name))).map(s=>({s, e:S.exams.find(x=>x.nisn===s.nisn && x.paketId === pkt.id), pkt}));
+}
+
+$('r-paket-sel').addEventListener('change', rR);
+
+function rR(){
+    if(!T||!$('tb-r'))return;
+    const pId = $('r-paket-sel').value;
+    const pkt = S.packets.find(p => p.id === pId);
+    
+    if(!pId) {
+        $('stats').innerHTML = '';
+        $('tb-r').innerHTML = '<tr><td colspan="8" class="text-center text-gray-400 py-8"><i class="fas fa-hand-pointer text-3xl mb-2 opacity-50 block"></i>Silakan pilih paket ujian terlebih dahulu.</td></tr>';
+        $('print-paket-name').textContent = '';
+        return;
+    }
+    
+    $('print-paket-name').textContent = `Paket: ${pkt.name} | Kelas: ${pkt.classes.join(', ')} | Mata Pelajaran: ${T.mapel}`;
+    const r=resRows(),done=r.filter(x=>x.e?.status==='submitted'),sc=done.map(x=>x.e.score),kkm=pkt.kkm??70;
+    
+    const box=(l,v)=>`<div class="bg-gray-50 border rounded-lg p-3 text-center"><p class="text-xs text-gray-500">${l}</p><p class="text-xl font-bold">${v}</p></div>`;
+    $('stats').innerHTML=box('Peserta',r.length)+box('Selesai',done.length)+box('Rata-rata',sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):'-')+box('Tertinggi / Terendah',sc.length?`${Math.max(...sc)} / ${Math.min(...sc)}`:'-')+box('Lulus',sc.length?`${sc.filter(x=>x>=kkm).length}/${sc.length}`:'-');
+    
+    const bd={'Belum mulai':'bg-gray-100 text-gray-600','Mengerjakan':'bg-yellow-100 text-yellow-700','Selesai':'bg-green-100 text-green-700'};
+    $('tb-r').innerHTML=r.map(({s,e})=>`<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td><span class="px-2 py-1 rounded-lg text-xs font-bold ${bd[st(e)]}">${st(e)}</span></td><td>${e?.status==='submitted'?`${e.correct}/${e.total}`:'-'}</td><td class="font-bold ${e?.score>=kkm?'text-green-600':'text-red-600'}">${e?.status==='submitted'?e.score:'-'}</td><td>${e?.violations?`<span class="text-red-600 font-semibold">${e.violations}</span>`:'0'}</td><td class="no-print">${e?`<button data-a="reset" data-id="${esc(e.id)}" class="text-xs text-red-600 underline hover:text-red-800">Reset</button>`:''}</td></tr>`).join('')||'<tr><td colspan="8" class="text-center text-gray-400 py-4">Belum ada siswa di kelas Anda.</td></tr>'
+}
 
 // ===== SISWA / UJIAN =====
 $('f-student').addEventListener('submit',async e=>{e.preventDefault();const b=$('s-btn');b.disabled=true;b.textContent='Memeriksa...';
 try{await studentStart($('s-nisn').value.trim(),$('s-tok').value.trim().toUpperCase())}catch(x){if(typeof x!=='string')console.error(x);toast(fmtErr(x),'err')}b.disabled=false;b.textContent='Mulai Ujian'});
 
 async function studentStart(nisn,tok,silent){
-const ts=await getDocs(query(C('teachers'),where('token','==',tok)));if(ts.empty)throw 'Token ujian tidak valid.';
-const t={username:ts.docs[0].id,...ts.docs[0].data()};if(!t.active)throw 'Ujian belum dibuka oleh guru.';
+const ps=await getDocs(query(C('packets'),where('token','==',tok)));if(ps.empty)throw 'Token ujian tidak valid.';
+const pkt={id:ps.docs[0].id,...ps.docs[0].data()};if(!pkt.active)throw 'Ujian belum dibuka oleh guru.';
+
 const sd=await getDoc(D('students',nisn));if(!sd.exists())throw 'NISN tidak terdaftar. Hubungi admin.';
-const s={nisn,...sd.data()};if(!classes(t).some(e=>cm(e,s.class)))throw `Ujian ini khusus kelas ${t.kelas}.`;
-const id=`${nisn}_${t.username}`,es=await getDoc(D('exams',id)),ex=es.exists()?es.data():{};
+const s={nisn,...sd.data()};if(!pkt.classes.some(e=>cm(e,s.class)))throw `Ujian ini khusus kelas ${pkt.classes.join(', ')}.`;
+
+const tDoc = await getDoc(D('teachers',pkt.teacherId));
+const t={username:pkt.teacherId,...tDoc.data()};
+
+const id=`${nisn}_${pkt.id}`,es=await getDoc(D('exams',id)),ex=es.exists()?es.data():{};
 if(ex.status==='submitted')throw 'Anda sudah mengumpulkan ujian ini.';
 
-// Ambil paket soal yg sesuai untuk kelas siswa ini
-const ps = await getDocs(query(C('packets'),where('teacherId','==',t.username)));
-const validPids = ps.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.classes.some(c=>cm(c,s.class))).map(p=>p.id);
+const qs=await getDocs(query(C('questions'),where('paketId','==',pkt.id)));if(qs.empty)throw 'Soal belum tersedia. Hubungi guru.';
+const rnd=seed(id);let list=qs.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.id.localeCompare(b.id));
 
-const qs=await getDocs(query(C('questions'),where('teacherId','==',t.username)));
-if(qs.empty || !validPids.length)throw `Soal belum tersedia untuk kelas ${s.class}. Hubungi guru.`;
-const rnd=seed(id);
-let list=qs.docs.map(d=>({id:d.id,...d.data()})).filter(q=>validPids.includes(q.paketId)).sort((a,b)=>a.id.localeCompare(b.id));
-if(!list.length)throw `Soal belum tersedia untuk kelas ${s.class}. Hubungi guru.`;
-
-const sh=t.shuffle!==false;if(sh)list=shuf(list,rnd);list.forEach(q=>q.ord=sh?shuf([0,1,2,3],rnd):[0,1,2,3]);
+const sh=pkt.shuffle!==false;if(sh)list=shuf(list,rnd);list.forEach(q=>q.ord=sh?shuf([0,1,2,3],rnd):[0,1,2,3]);
 const startedAt=ex.startedAt||Date.now();
-U={on:true,id,t,s,qs:list,i:0,ans:ex.answers||{},flags:ex.flags||{},viol:ex.violations||0,end:startedAt+(t.duration||60)*60000,maxV:t.maxViol||3,dirty:false,hid:false};
-await setDoc(D('exams',id),{nisn,teacherId:t.username,studentName:s.name,class:s.class,mapel:t.mapel,startedAt,status:'in_progress',answers:U.ans,flags:U.flags,violations:U.viol},{merge:true});
+U={on:true,id,pkt,t,s,qs:list,i:0,ans:ex.answers||{},flags:ex.flags||{},viol:ex.violations||0,end:startedAt+(pkt.duration||60)*60000,maxV:pkt.maxViol||3,dirty:false,hid:false};
+
+await setDoc(D('exams',id),{nisn,teacherId:t.username,paketId:pkt.id,paketName:pkt.name,studentName:s.name,class:s.class,mapel:t.mapel,startedAt,status:'in_progress',answers:U.ans,flags:U.flags,violations:U.viol},{merge:true});
 store.set({role:'student',nisn,tok});
-$('e-name').textContent=s.name;$('e-info').textContent=`NISN ${s.nisn} | Kelas ${s.class} | ${t.mapel}`;
+$('e-name').textContent=s.name;$('e-info').textContent=`NISN ${s.nisn} | Kelas ${s.class} | ${pkt.name}`;
 try{await document.documentElement.requestFullscreen()}catch{}
 view('v-exam');renderQ();tick();U.timer=setInterval(tick,1000);U.retry=setInterval(()=>{if(U.dirty)save()},15000);
 if(silent)toast('Sesi ujian dilanjutkan.')}
@@ -454,7 +569,7 @@ const total=U.qs.length,correct=U.qs.filter(q=>U.ans[q.id]===q.answer).length,sc
 let ok=false;for(let i=0;i<3&&!ok;i++){U.on=true;ok=await save({status:'submitted',score,correct,total,submittedAt:new Date().toISOString()});U.on=false;if(!ok)await new Promise(r=>setTimeout(r,1500))}
 if(!ok){U.on=true;U.timer=setInterval(tick,1000);return toast('Gagal mengirim jawaban. Periksa koneksi lalu tekan Kumpulkan lagi.','err')}
 store.clear();try{if(document.fullscreenElement)await document.exitFullscreen()}catch{}
-if(U.t.showScore!==false){const kkm=U.t.kkm??70;$('r-score').classList.remove('hidden');$('r-val').textContent=score;$('r-note').innerHTML=`${correct} dari ${total} benar &middot; <b class="${score>=kkm?'text-green-600':'text-red-600'}">${score>=kkm?'Lulus':'Belum lulus'}</b>`}
+if(U.pkt.showScore!==false){const kkm=U.pkt.kkm??70;$('r-score').classList.remove('hidden');$('r-val').textContent=score;$('r-note').innerHTML=`${correct} dari ${total} benar &middot; <b class="${score>=kkm?'text-green-600':'text-red-600'}">${score>=kkm?'Lulus':'Belum lulus'}</b>`}
 view('v-result')}
 
 // ===== PENGAWASAN =====
