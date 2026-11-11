@@ -50,28 +50,17 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <div class="flex justify-end gap-2 mt-4"><button type="button" data-a="closePaket" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button><button type="submit" class="btn">Buat Paket</button></div>
 </form></div>
 
-<!-- LANDING -->
-<main id="v-land" class="view on"><div class="min-h-screen flex flex-col items-center justify-center p-4">
-<div class="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg"><i class="fas fa-laptop-code text-4xl text-white"></i></div>
-<h1 class="text-3xl font-bold">Portal Ujian Online</h1><p class="text-gray-500 mb-8">Pilih portal untuk masuk</p>
-<div class="grid md:grid-cols-3 gap-5 max-w-3xl w-full">
-<button data-a="role" data-id="student" class="card text-left hover:shadow-lg hover:-translate-y-1 transition"><i class="fas fa-user-graduate text-2xl text-blue-600 mb-2"></i><h3 class="font-bold text-lg">Siswa</h3><p class="text-sm text-gray-500">Kerjakan ujian</p></button>
-<button data-a="role" data-id="teacher" class="card text-left hover:shadow-lg hover:-translate-y-1 transition"><i class="fas fa-chalkboard-teacher text-2xl text-green-600 mb-2"></i><h3 class="font-bold text-lg">Guru</h3><p class="text-sm text-gray-500">Soal, token & hasil</p></button>
-<button data-a="role" data-id="admin" class="card text-left hover:shadow-lg hover:-translate-y-1 transition"><i class="fas fa-user-shield text-2xl text-purple-600 mb-2"></i><h3 class="font-bold text-lg">Admin</h3><p class="text-sm text-gray-500">Data siswa & guru</p></button>
-</div></div></main>
-
 <!-- LOGIN SISWA -->
 <main id="v-student" class="view"><div class="min-h-screen flex items-center justify-center p-4"><div class="card w-full max-w-md">
-<button data-a="back" class="text-gray-400 mb-2"><i class="fas fa-arrow-left"></i></button>
-<h2 class="text-2xl font-bold mb-1">Login Siswa</h2><p class="text-sm text-gray-500 mb-5">Masukkan NISN dan token dari guru. Ujian akan berjalan layar penuh, berpindah tab/jendela akan tercatat sebagai pelanggaran.</p>
-<form id="f-student" class="space-y-4"><div><label class="lbl">NISN</label><input id="s-nisn" class="inp" required inputmode="numeric" autocomplete="off"></div>
-<div><label class="lbl">Token Ujian</label><input id="s-tok" class="inp uppercase" required autocomplete="off"></div>
-<button id="s-btn" class="btn w-full py-3">Mulai Ujian</button></form></div></div></main>
+<div class="text-center mb-6"><div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-user-graduate text-3xl text-blue-600"></i></div><h2 class="text-2xl font-bold">Portal Ujian Siswa</h2></div>
+<p class="text-sm text-gray-500 mb-5 text-center">Masukkan NISN dan token ujian dari guru. Sistem akan memantau aktivitas layar Anda.</p>
+<form id="f-student" class="space-y-4"><div><label class="lbl">NISN</label><input id="s-nisn" class="inp text-center text-lg tracking-wider font-semibold" required inputmode="numeric" autocomplete="off" placeholder="Masukkan NISN"></div>
+<div><label class="lbl">Token Ujian</label><input id="s-tok" class="inp text-center uppercase text-lg tracking-wider font-semibold" required autocomplete="off" placeholder="XXXXXX"></div>
+<button id="s-btn" class="btn w-full py-3 mt-2 text-lg">Mulai Ujian</button></form></div></div></main>
 
 <!-- LOGIN STAFF -->
-<main id="v-staff" class="view"><div class="min-h-screen flex items-center justify-center p-4"><div class="card w-full max-w-md">
-<button data-a="back" class="text-gray-400 mb-2"><i class="fas fa-arrow-left"></i></button>
-<h2 id="sl-title" class="text-2xl font-bold mb-5"></h2>
+<main id="v-staff" class="view"><div class="min-h-screen flex items-center justify-center p-4"><div class="card w-full max-w-md border-t-4 border-t-blue-600">
+<h2 id="sl-title" class="text-2xl font-bold mb-5 text-center">Login Staf</h2>
 <form id="f-staff" class="space-y-4"><div><label class="lbl">Username</label><input id="sl-u" class="inp" required autocomplete="username"></div>
 <div><label class="lbl">Password</label><input id="sl-p" type="password" class="inp" required autocomplete="current-password"></div>
 <button id="sl-btn" class="btn w-full py-3">Masuk</button></form></div></div></main>
@@ -273,15 +262,40 @@ const stop=()=>{subs.forEach(f=>f());subs=[]};
 try{$('ld-msg').textContent='Menghubungkan ke server...';const app=initializeApp(cfg);db=getFirestore(app);try{await signInAnonymously(getAuth(app))}catch(e){console.warn(e)}$('ld-msg').textContent='Memeriksa sesi login...';await resume()}catch(e){console.error(e);toast('Gagal menginisialisasi sistem','err')}
 clearTimeout(slow);const L=$('loader');L.style.transition='opacity .4s';L.style.opacity=0;setTimeout(()=>L.remove(),400)})();
 
-async function resume(){const s=store.get();if(!s)return;
-try{if(s.role==='admin'){const c=await getDoc(D('settings','config'));const ah=(c.exists()&&c.data().adminHash)||await sha('admin123');if(s.h===ah)return openAdmin();}
-else if(s.role==='teacher'){const d=await getDoc(D('teachers',s.user));if(d.exists()&&d.data().passHash===s.h){T={username:s.user,...d.data()};return openTeacher()}}
-else if(s.role==='student')return await studentStart(s.nisn,s.tok,true);}catch(e){console.warn(e);if(typeof e==='string'){store.clear();toast(e,'err')}else toast('Gagal memulihkan sesi. Periksa koneksi lalu muat ulang halaman.','err');return}store.clear()}
+async function resume(){
+    const s=store.get();
+    if(s){
+        try {
+            if(s.role==='admin'){const c=await getDoc(D('settings','config'));const ah=(c.exists()&&c.data().adminHash)||await sha('admin123');if(s.h===ah)return openAdmin();}
+            else if(s.role==='teacher'){const d=await getDoc(D('teachers',s.user));if(d.exists()&&d.data().passHash===s.h){T={username:s.user,...d.data()};return openTeacher()}}
+            else if(s.role==='student')return await studentStart(s.nisn,s.tok,true);
+        } catch(e) {
+            console.warn(e);
+            if(typeof e==='string') toast(e,'err');
+            store.clear();
+        }
+    }
+    
+    // Routing berdasarkan Parameter URL
+    const p = new URLSearchParams(window.location.search);
+    if(p.has('admin')) { 
+        role = 'admin'; 
+        $('sl-title').textContent = 'Login Admin'; 
+        view('v-staff'); 
+    } 
+    else if (p.has('guru')) { 
+        role = 'teacher'; 
+        $('sl-title').textContent = 'Login Guru'; 
+        view('v-staff'); 
+    } 
+    else { 
+        role = 'student'; 
+        view('v-student'); 
+    }
+}
 
 // ===== AKSI KLIK =====
 const act={
-role(r){role=r;if(r==='student')return view('v-student');$('sl-title').textContent=r==='admin'?'Login Admin':'Login Guru';view('v-staff')},
-back(){view('v-land')},
 tab(id){const gr=id.split('-')[0];document.querySelectorAll('.p-'+gr).forEach(p=>p.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('.t-'+gr).forEach(b=>b.classList.toggle('on',b.dataset.id===id));if(id==='t-hasil')rR()},
 pick(id){$(id).click()},
 logout(){store.clear();location.reload()},
