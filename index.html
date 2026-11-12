@@ -56,7 +56,29 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <p class="text-sm text-gray-500 mb-5 text-center">Masukkan NISN dan token ujian dari guru. Sistem akan memantau aktivitas layar Anda.</p>
 <form id="f-student" class="space-y-4"><div><label class="lbl">NISN</label><input id="s-nisn" class="inp text-center text-lg tracking-wider font-semibold" required inputmode="numeric" autocomplete="off" placeholder="Masukkan NISN"></div>
 <div><label class="lbl">Token Ujian</label><input id="s-tok" class="inp text-center uppercase text-lg tracking-wider font-semibold" required autocomplete="off" placeholder="XXXXXX"></div>
-<button id="s-btn" class="btn w-full py-3 mt-2 text-lg">Mulai Ujian</button></form></div></div></main>
+<button id="s-btn" class="btn w-full py-3 mt-2 text-lg">Lanjutkan</button></form></div></div></main>
+
+<!-- KONFIRMASI SISWA -->
+<main id="v-confirm" class="view"><div class="min-h-screen flex items-center justify-center p-4">
+<div class="card w-full max-w-md shadow-lg border-t-4 border-t-green-500">
+    <div class="text-center border-b pb-4 mb-4">
+        <h2 class="text-2xl font-bold text-green-700">Konfirmasi Data</h2>
+        <p class="text-sm text-gray-500 mt-1">Pastikan data Anda sudah benar sebelum mulai</p>
+    </div>
+    <table class="w-full text-sm text-left mb-6 border-collapse">
+        <tr class="border-b"><th class="py-2.5 w-1/3 text-gray-500 font-medium">NISN</th><td class="py-2.5 font-bold text-gray-900" id="cf-nisn"></td></tr>
+        <tr class="border-b"><th class="py-2.5 text-gray-500 font-medium">Nama Siswa</th><td class="py-2.5 font-bold text-gray-900" id="cf-name"></td></tr>
+        <tr class="border-b"><th class="py-2.5 text-gray-500 font-medium">Kelas</th><td class="py-2.5 font-bold text-gray-900" id="cf-kelas"></td></tr>
+        <tr class="border-b"><th class="py-2.5 text-gray-500 font-medium">Mata Pelajaran</th><td class="py-2.5 font-bold text-gray-900" id="cf-mapel"></td></tr>
+        <tr class="border-b"><th class="py-2.5 text-gray-500 font-medium">Paket Soal</th><td class="py-2.5 font-bold text-gray-900" id="cf-paket"></td></tr>
+        <tr><th class="py-2.5 text-gray-500 font-medium">Durasi Ujian</th><td class="py-2.5 font-bold text-blue-600"><span id="cf-dur"></span> Menit</td></tr>
+    </table>
+    <div class="flex gap-3">
+        <button onclick="location.reload()" class="btn2 flex-1 bg-red-50 text-red-600 hover:bg-red-100 border border-red-100">Batal / Salah Data</button>
+        <button id="cf-btn" class="btn flex-1 bg-green-600 hover:bg-green-700">Mulai Ujian <i class="fas fa-arrow-right ml-1 text-xs"></i></button>
+    </div>
+</div>
+</div></main>
 
 <!-- LOGIN STAFF -->
 <main id="v-staff" class="view"><div class="min-h-screen flex items-center justify-center p-4"><div class="card w-full max-w-md border-t-4 border-t-blue-600">
@@ -255,11 +277,12 @@ const fmtErr=e=>typeof e==='string'?e:(e?.code==='permission-denied'?'Akses dito
 
 let S={students:[],teachers:[],questions:[],exams:[],classes:[],packets:[]},T=null,subs=[],role=null,U={on:false},fails=0,lockUntil=0;
 let currentPaket = null;
+let prepData = null; // Menyimpan data sementara untuk layar konfirmasi
 const stop=()=>{subs.forEach(f=>f());subs=[]};
 
-// ===== INIT =====
+// ===== INIT & ROUTING =====
 (async()=>{const slow=setTimeout(()=>{$('ld-msg').innerHTML='Memuat terlalu lama. Periksa koneksi internet. <button onclick="location.reload()" class="underline font-semibold ml-1">Muat ulang</button>'},15000);
-try{$('ld-msg').textContent='Menghubungkan ke server...';const app=initializeApp(cfg);db=getFirestore(app);try{await signInAnonymously(getAuth(app))}catch(e){console.warn(e)}$('ld-msg').textContent='Memeriksa sesi login...';await resume()}catch(e){console.error(e);toast('Gagal menginisialisasi sistem','err')}
+try{$('ld-msg').textContent='Menghubungkan ke server...';const app=initializeApp(cfg);db=getFirestore(app);try{await signInAnonymously(getAuth(app))}catch(e){console.warn(e)}$('ld-msg').textContent='Memeriksa sesi...';await resume()}catch(e){console.error(e);toast('Gagal menginisialisasi sistem','err')}
 clearTimeout(slow);const L=$('loader');L.style.transition='opacity .4s';L.style.opacity=0;setTimeout(()=>L.remove(),400)})();
 
 async function resume(){
@@ -268,15 +291,37 @@ async function resume(){
         try {
             if(s.role==='admin'){const c=await getDoc(D('settings','config'));const ah=(c.exists()&&c.data().adminHash)||await sha('admin123');if(s.h===ah)return openAdmin();}
             else if(s.role==='teacher'){const d=await getDoc(D('teachers',s.user));if(d.exists()&&d.data().passHash===s.h){T={username:s.user,...d.data()};return openTeacher()}}
-            else if(s.role==='student')return await studentStart(s.nisn,s.tok,true);
+            else if(s.role==='student') {
+                // Resume Ujian Secara Diam-diam tanpa Konfirmasi
+                $('ld-msg').textContent='Memulihkan sesi ujian...';
+                const ps=await getDocs(query(C('packets'),where('token','==',s.tok)));
+                if(ps.empty) { store.clear(); return routeBasedOnUrl(); }
+                const pkt={id:ps.docs[0].id,...ps.docs[0].data()};
+
+                const sd=await getDoc(D('students',s.nisn));
+                if(!sd.exists()) { store.clear(); return routeBasedOnUrl(); }
+                const st={nisn:s.nisn,...sd.data()};
+
+                const tDoc = await getDoc(D('teachers',pkt.teacherId));
+                const t={username:pkt.teacherId,...tDoc.data()};
+
+                const id=`${s.nisn}_${pkt.id}`;
+                const es=await getDoc(D('exams',id));
+                const ex=es.exists()?es.data():{};
+                
+                await startConfirmedExam({nisn:s.nisn, tok:s.tok, pkt, s:st, t, id, ex}, true);
+                return;
+            }
         } catch(e) {
             console.warn(e);
             if(typeof e==='string') toast(e,'err');
             store.clear();
         }
     }
-    
-    // Routing berdasarkan Parameter URL
+    routeBasedOnUrl();
+}
+
+function routeBasedOnUrl() {
     const p = new URLSearchParams(window.location.search);
     if(p.has('admin')) { 
         role = 'admin'; 
@@ -298,7 +343,7 @@ async function resume(){
 const act={
 tab(id){const gr=id.split('-')[0];document.querySelectorAll('.p-'+gr).forEach(p=>p.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('.t-'+gr).forEach(b=>b.classList.toggle('on',b.dataset.id===id));if(id==='t-hasil')rR()},
 pick(id){$(id).click()},
-logout(){store.clear();location.reload()},
+logout(){store.clear();location.href = window.location.pathname + window.location.search;},
 delS(id){ask('Hapus siswa?',`NISN ${id} akan dihapus.`,()=>deleteDoc(D('students',id)).then(()=>toast('Siswa dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 delT(id){ask('Hapus guru?',`Akun ${id} akan dihapus.`,()=>deleteDoc(D('teachers',id)).then(()=>toast('Guru dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 delK(id){ask('Hapus kelas?',`Kelas ${id} akan dihapus dari daftar (Siswa & Guru tidak akan terhapus otomatis).`,()=>setDoc(D('settings','config'),{classes:S.classes.filter(x=>x!==id)},{merge:true}).then(()=>toast('Kelas dihapus')).catch(e=>toast(fmtErr(e),'err')))},
@@ -627,40 +672,102 @@ function rR(){
     $('tb-r').innerHTML=r.map(({s,e})=>`<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td><span class="px-2 py-1 rounded-lg text-xs font-bold ${bd[st(e)]}">${st(e)}</span></td><td>${e?.status==='submitted'?`${e.correct}/${e.total}`:'-'}</td><td class="font-bold ${e?.score>=kkm?'text-green-600':'text-red-600'}">${e?.status==='submitted'?e.score:'-'}</td><td>${e?.violations?`<span class="text-red-600 font-semibold">${e.violations}</span>`:'0'}</td><td class="no-print">${e?`<button data-a="reset" data-id="${esc(e.id)}" class="text-xs text-red-600 underline hover:text-red-800">Reset</button>`:''}</td></tr>`).join('')||'<tr><td colspan="8" class="text-center text-gray-400 py-4">Belum ada siswa di kelas Anda.</td></tr>'
 }
 
-// ===== SISWA / UJIAN =====
-$('f-student').addEventListener('submit',async e=>{e.preventDefault();const b=$('s-btn');b.disabled=true;b.textContent='Memeriksa...';
-try{await studentStart($('s-nisn').value.trim(),$('s-tok').value.trim().toUpperCase())}catch(x){if(typeof x!=='string')console.error(x);toast(fmtErr(x),'err')}b.disabled=false;b.textContent='Mulai Ujian'});
+// ===== SISWA / UJIAN (VALIDASI & KONFIRMASI) =====
+$('f-student').addEventListener('submit', async e => {
+    e.preventDefault();
+    const b = $('s-btn'); b.disabled = true; b.textContent = 'Memeriksa...';
+    try {
+        await prepareExam($('s-nisn').value.trim(), $('s-tok').value.trim().toUpperCase());
+    } catch(x) {
+        if(typeof x !== 'string') console.error(x);
+        toast(fmtErr(x), 'err');
+    }
+    b.disabled = false; b.textContent = 'Lanjutkan';
+});
 
-async function studentStart(nisn,tok,silent){
-const ps=await getDocs(query(C('packets'),where('token','==',tok)));if(ps.empty)throw 'Token ujian tidak valid.';
-const pkt={id:ps.docs[0].id,...ps.docs[0].data()};if(!pkt.active)throw 'Ujian belum dibuka oleh guru.';
+async function prepareExam(nisn, tok) {
+    const ps = await getDocs(query(C('packets'), where('token', '==', tok)));
+    if(ps.empty) throw 'Token ujian tidak valid.';
+    const pkt = {id: ps.docs[0].id, ...ps.docs[0].data()};
+    if(!pkt.active) throw 'Ujian belum dibuka oleh guru.';
 
-const sd=await getDoc(D('students',nisn));if(!sd.exists())throw 'NISN tidak terdaftar. Hubungi admin.';
-const s={nisn,...sd.data()};if(!pkt.classes.some(e=>cm(e,s.class)))throw `Ujian ini khusus kelas ${pkt.classes.join(', ')}.`;
+    const sd = await getDoc(D('students', nisn));
+    if(!sd.exists()) throw 'NISN tidak terdaftar. Hubungi admin.';
+    const s = {nisn, ...sd.data()};
+    if(!pkt.classes.some(e => cm(e, s.class))) throw `Ujian ini khusus kelas ${pkt.classes.join(', ')}.`;
 
-const tDoc = await getDoc(D('teachers',pkt.teacherId));
-const t={username:pkt.teacherId,...tDoc.data()};
+    const tDoc = await getDoc(D('teachers', pkt.teacherId));
+    const t = {username: pkt.teacherId, ...tDoc.data()};
 
-const id=`${nisn}_${pkt.id}`,es=await getDoc(D('exams',id)),ex=es.exists()?es.data():{};
-if(ex.status==='submitted')throw 'Anda sudah mengumpulkan ujian ini.';
+    const id = `${nisn}_${pkt.id}`;
+    const es = await getDoc(D('exams', id));
+    const ex = es.exists() ? es.data() : {};
+    if(ex.status === 'submitted') throw 'Anda sudah mengumpulkan ujian ini.';
 
-const qs=await getDocs(query(C('questions'),where('paketId','==',pkt.id)));if(qs.empty)throw 'Soal belum tersedia. Hubungi guru.';
-const rnd=seed(id);let list=qs.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.id.localeCompare(b.id));
+    // Simpan data ke variabel global agar bisa dipakai setelah menekan "Mulai Ujian"
+    prepData = {nisn, tok, pkt, s, t, id, ex};
 
-const sh=pkt.shuffle!==false;if(sh)list=shuf(list,rnd);list.forEach(q=>q.ord=sh?shuf([0,1,2,3],rnd):[0,1,2,3]);
-const startedAt=ex.startedAt||Date.now();
+    // Tampilkan Data Konfirmasi
+    $('cf-nisn').textContent = s.nisn;
+    $('cf-name').textContent = s.name;
+    $('cf-kelas').textContent = s.class;
+    $('cf-mapel').textContent = t.mapel;
+    $('cf-paket').textContent = pkt.name;
+    $('cf-dur').textContent = pkt.duration || 60;
 
-// Cek max pelanggaran (Default 0 / Bebas jika tidak diatur)
-const mv = pkt.maxViol !== undefined ? pkt.maxViol : 0;
+    view('v-confirm');
+}
 
-U={on:true,id,pkt,t,s,qs:list,i:0,ans:ex.answers||{},flags:ex.flags||{},viol:ex.violations||0,end:startedAt+(pkt.duration||60)*60000,maxV:mv,dirty:false,hid:false};
+// Tombol Mulai Ujian dari Halaman Konfirmasi
+$('cf-btn').addEventListener('click', async () => {
+    const b = $('cf-btn'); b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Memuat...';
+    try {
+        await startConfirmedExam(null, false);
+    } catch(x) {
+        if(typeof x !== 'string') console.error(x);
+        toast(fmtErr(x), 'err');
+        b.disabled = false; b.innerHTML = 'Mulai Ujian <i class="fas fa-arrow-right ml-1 text-xs"></i>';
+    }
+});
 
-await setDoc(D('exams',id),{nisn,teacherId:t.username,paketId:pkt.id,paketName:pkt.name,studentName:s.name,class:s.class,mapel:t.mapel,startedAt,status:'in_progress',answers:U.ans,flags:U.flags,violations:U.viol},{merge:true});
-store.set({role:'student',nisn,tok});
-$('e-name').textContent=s.name;$('e-info').textContent=`NISN ${s.nisn} | Kelas ${s.class} | ${pkt.name}`;
-try{await document.documentElement.requestFullscreen()}catch{}
-view('v-exam');renderQ();tick();U.timer=setInterval(tick,1000);U.retry=setInterval(()=>{if(U.dirty)save()},15000);
-if(silent)toast('Sesi ujian dilanjutkan.')}
+// Fungsi untuk memulai layar penuh & render soal (Dipakai oleh tombol Mulai & Auto-Resume)
+async function startConfirmedExam(silentData, isSilentResume) {
+    const data = silentData || prepData;
+    if(!data) throw 'Data sesi tidak valid, silakan muat ulang halaman.';
+    const {nisn, tok, pkt, s, t, id, ex} = data;
+
+    const qs = await getDocs(query(C('questions'), where('paketId', '==', pkt.id)));
+    if(qs.empty) throw 'Soal belum tersedia. Hubungi guru.';
+    const rnd = seed(id);
+    let list = qs.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => a.id.localeCompare(b.id));
+
+    const sh = pkt.shuffle !== false;
+    if(sh) list = shuf(list, rnd);
+    list.forEach(q => q.ord = sh ? shuf([0,1,2,3], rnd) : [0,1,2,3]);
+    
+    const startedAt = ex.startedAt || Date.now();
+    const mv = pkt.maxViol !== undefined ? pkt.maxViol : 0;
+
+    U = {on: true, id, pkt, t, s, qs: list, i: 0, ans: ex.answers || {}, flags: ex.flags || {}, viol: ex.violations || 0, end: startedAt + (pkt.duration || 60) * 60000, maxV: mv, dirty: false, hid: false};
+
+    await setDoc(D('exams', id), {nisn, teacherId: t.username, paketId: pkt.id, paketName: pkt.name, studentName: s.name, class: s.class, mapel: t.mapel, startedAt, status: 'in_progress', answers: U.ans, flags: U.flags, violations: U.viol}, {merge: true});
+    
+    store.set({role: 'student', nisn, tok});
+    
+    $('e-name').textContent = s.name;
+    $('e-info').textContent = `NISN ${s.nisn} | Kelas ${s.class} | ${pkt.name}`;
+    
+    try { await document.documentElement.requestFullscreen(); } catch {}
+    
+    view('v-exam');
+    renderQ();
+    tick();
+    
+    U.timer = setInterval(tick, 1000);
+    U.retry = setInterval(() => { if(U.dirty) save() }, 15000);
+    
+    if(isSilentResume) toast('Sesi ujian dilanjutkan.');
+}
 
 function renderQ(){const q=U.qs[U.i];$('qbox').innerHTML=`<div class="flex justify-between mb-3"><b class="text-blue-600">Soal ${U.i+1} dari ${U.qs.length}</b><button data-a="flag" class="text-sm ${U.flags[q.id]?'text-yellow-600 font-bold':'text-gray-500'}"><i class="fas fa-flag"></i> Ragu-ragu</button></div><p class="text-lg whitespace-pre-wrap mb-4">${esc(q.text)}</p>${q.image?`<img src="${esc(q.image)}" draggable="false" class="max-w-full max-h-80 mb-5 rounded border mx-auto">`:''}`+q.ord.map((oi,j)=>`<button data-a="ans" data-id="${oi}" class="block w-full text-left p-3 mb-2 border rounded-lg ${U.ans[q.id]===oi?'bg-blue-50 border-blue-500 font-medium':'hover:bg-gray-50'}"><b class="mr-2">${'ABCD'[j]}.</b>${esc(q.options[oi])}${oimg(q,oi,'max-h-40 max-w-full mt-2')}</button>`).join('');
 $('nav').innerHTML=U.qs.map((x,j)=>`<button data-a="go" data-id="${j}" class="w-9 h-9 rounded text-sm font-semibold border ${U.flags[x.id]?'bg-yellow-400 border-yellow-500':U.ans[x.id]!==undefined?'bg-green-500 text-white border-green-600':'bg-white'} ${j===U.i?'ring-2 ring-blue-600':''}">${j+1}</button>`).join('');
