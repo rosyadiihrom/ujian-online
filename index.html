@@ -279,7 +279,7 @@ const fmtErr=e=>typeof e==='string'?e:(e?.code==='permission-denied'?'Akses dito
 
 let S={students:[],teachers:[],questions:[],exams:[],classes:[],packets:[]},T=null,subs=[],role=null,U={on:false},fails=0,lockUntil=0;
 let currentPaket = null;
-let prepData = null; // Menyimpan data sementara untuk layar konfirmasi
+let prepData = null; 
 const stop=()=>{subs.forEach(f=>f());subs=[]};
 
 // ===== INIT & ROUTING =====
@@ -294,23 +294,18 @@ async function resume(){
             if(s.role==='admin'){const c=await getDoc(D('settings','config'));const ah=(c.exists()&&c.data().adminHash)||await sha('admin123');if(s.h===ah)return openAdmin();}
             else if(s.role==='teacher'){const d=await getDoc(D('teachers',s.user));if(d.exists()&&d.data().passHash===s.h){T={username:s.user,...d.data()};return openTeacher()}}
             else if(s.role==='student') {
-                // Resume Ujian Secara Diam-diam tanpa Konfirmasi
                 $('ld-msg').textContent='Memulihkan sesi ujian...';
                 const ps=await getDocs(query(C('packets'),where('token','==',s.tok)));
                 if(ps.empty) { store.clear(); return routeBasedOnUrl(); }
                 const pkt={id:ps.docs[0].id,...ps.docs[0].data()};
-
                 const sd=await getDoc(D('students',s.nisn));
                 if(!sd.exists()) { store.clear(); return routeBasedOnUrl(); }
                 const st={nisn:s.nisn,...sd.data()};
-
                 const tDoc = await getDoc(D('teachers',pkt.teacherId));
                 const t={username:pkt.teacherId,...tDoc.data()};
-
                 const id=`${s.nisn}_${pkt.id}`;
                 const es=await getDoc(D('exams',id));
                 const ex=es.exists()?es.data():{};
-                
                 await startConfirmedExam({nisn:s.nisn, tok:s.tok, pkt, s:st, t, id, ex}, true);
                 return;
             }
@@ -325,20 +320,9 @@ async function resume(){
 
 function routeBasedOnUrl() {
     const p = new URLSearchParams(window.location.search);
-    if(p.has('admin')) { 
-        role = 'admin'; 
-        $('sl-title').textContent = 'Login Admin'; 
-        view('v-staff'); 
-    } 
-    else if (p.has('guru')) { 
-        role = 'teacher'; 
-        $('sl-title').textContent = 'Login Guru'; 
-        view('v-staff'); 
-    } 
-    else { 
-        role = 'student'; 
-        view('v-student'); 
-    }
+    if(p.has('admin')) { role = 'admin'; $('sl-title').textContent = 'Login Admin'; view('v-staff'); } 
+    else if (p.has('guru')) { role = 'teacher'; $('sl-title').textContent = 'Login Guru'; view('v-staff'); } 
+    else { role = 'student'; view('v-student'); }
 }
 
 // ===== AKSI KLIK =====
@@ -357,7 +341,6 @@ delT(id){ask('Hapus guru?',`Akun ${id} akan dihapus.`,()=>deleteDoc(D('teachers'
 
 delK(id){ask('Hapus kelas?',`Kelas ${id} akan dihapus dari daftar (Siswa & Guru tidak akan terhapus otomatis).`,()=>setDoc(D('settings','config'),{classes:S.classes.filter(x=>x!==id)},{merge:true}).then(()=>toast('Kelas dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 
-// Manajemen Paket
 newPaket(){
     const c = String(T.kelas||'').split(',').map(x=>x.trim()).filter(Boolean);
     $('mp-kelas').innerHTML = c.map(x=>`<label class="flex items-center gap-1.5 cursor-pointer hover:bg-gray-100 p-1 rounded"><input type="checkbox" value="${esc(x)}" class="w-4 h-4 text-blue-600"> <span class="font-medium text-sm">Kelas ${esc(x)}</span></label>`).join('');
@@ -373,7 +356,6 @@ openPaket(id){
     $('det-paket-name').textContent = currentPaket.name;
     $('det-paket-kelas').innerHTML = '<i class="fas fa-users mr-1"></i> Kelas ' + currentPaket.classes.join(', ');
     
-    // Load Settings
     $('c-tok').value = currentPaket.token || '';
     $('c-dur').value = currentPaket.duration || 60;
     $('c-kkm').value = currentPaket.kkm ?? 70;
@@ -418,12 +400,10 @@ delAllQ(){
 reset(id){ask('Reset ujian siswa?','Jawaban & nilai siswa ini dihapus sehingga bisa mengerjakan ulang.',()=>deleteDoc(D('exams',id)).then(()=>toast('Ujian direset')).catch(e=>toast(fmtErr(e),'err')))},
 genTok(){$('c-tok').value=Math.random().toString(36).slice(2,8).toUpperCase()},
 
-// Simpan pengaturan spesifik paket
 async saveCfg(){
     if(!currentPaket) return;
     const tok=$('c-tok').value.trim().toUpperCase(),dur=parseInt($('c-dur').value),kkm=parseInt($('c-kkm').value),mv=parseInt($('c-viol').value);
     if(!tok)return toast('Token wajib diisi','err');if(!(dur>=5))return toast('Durasi minimal 5 menit','err');if(isNaN(kkm)||kkm<0||kkm>100)return toast('KKM 0-100','err');if(isNaN(mv)||mv<0)return toast('Batas pelanggaran tidak valid','err');
-    
     try {
         const dup=await getDocs(query(C('packets'),where('token','==',tok)));
         if(dup.docs.some(d=>d.id!==currentPaket.id)) return toast('Token sudah dipakai pada paket lain','err');
@@ -488,7 +468,6 @@ const tkl=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value);
 $('at-k-list').innerHTML=S.classes.map(k=>`<label class="flex items-center gap-1.5 bg-white border px-2 py-1 rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" value="${esc(k)}" class="w-4 h-4 text-blue-600" ${tkl.includes(k)?'checked':''}> ${esc(k)}</label>`).join('')||'<span class="text-xs text-red-500">Tambahkan kelas di menu Kelas terlebih dahulu!</span>';}
 $('a-q').addEventListener('input',rA);
 
-// Simpan Siswa
 $('f-addS').addEventListener('submit',async e=>{
     e.preventDefault();
     try {
@@ -498,20 +477,17 @@ $('f-addS').addEventListener('submit',async e=>{
     } catch(x) { toast(fmtErr(x),'err'); }
 });
 
-// Upload Massal Siswa
 $('up-s').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{busy('Memproses file...');const rows=await readXlsx(f),items=[],newClasses=[];
 rows.forEach(r=>{const n=g(r,'nisn'),m=g(r,'nama','name'),k=g(r,'kelas','class');if(n&&m&&k){const cls=String(k).trim();items.push([D('students',String(n).trim()),{name:String(m).trim(),class:cls,registeredAt:new Date().toISOString()}]);if(!S.classes.includes(cls)&&!newClasses.includes(cls))newClasses.push(cls)}});
 if(!items.length)return toast('Tidak ada baris valid. Periksa kolom NISN, Nama, Kelas.','err');await batchSet(items);
 if(newClasses.length){const c=[...new Set([...S.classes,...newClasses])].sort();await setDoc(D('settings','config'),{classes:c},{merge:true});}
 toast(`${items.length} siswa diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
 
-// Simpan Guru
 $('f-addT').addEventListener('submit',async e=>{
     e.preventDefault();
     const u=$('at-u').value.trim();
     const kls=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value).join(',');
     if(!kls) return toast('Pilih minimal 1 kelas untuk guru ini.','err');
-    
     try {
         const isEdit = $('at-u').readOnly;
         if(!isEdit && (await getDoc(D('teachers',u))).exists()) return toast('Username sudah dipakai','err');
@@ -526,7 +502,6 @@ $('f-addT').addEventListener('submit',async e=>{
     } catch(x) { toast(fmtErr(x),'err'); }
 });
 
-// Upload Massal Guru
 $('up-t').addEventListener('change',async e=>{
     const f=e.target.files[0];if(!f)return;
     try{
@@ -538,7 +513,6 @@ $('up-t').addEventListener('change',async e=>{
                   m=String(g(r,'mapel','mata pelajaran')||'').trim(),
                   k=String(g(r,'kelas','class')||'').trim(),
                   p=String(g(r,'password')||'').trim();
-            
             if(u&&n&&m&&k&&p) {
                 items.push([D('teachers',u),{name:n, mapel:m, kelas:k, passHash:await sha(p), createdAt:new Date().toISOString()}]);
                 k.split(',').forEach(cls => {
@@ -580,7 +554,7 @@ $('f-paket').addEventListener('submit', async e => {
         await setDoc(doc(C('packets')), {
             name, classes: cls, teacherId: T.username, createdAt: new Date().toISOString(),
             token: Math.random().toString(36).slice(2,8).toUpperCase(),
-            duration: 60, kkm: 70, maxViol: 0, active: false, shuffle: true, showScore: true // Default pelanggaran dibuat 0
+            duration: 60, kkm: 70, maxViol: 0, active: false, shuffle: true, showScore: true 
         });
         toast('Paket berhasil dibuat');
         act.closePaket();
@@ -637,11 +611,8 @@ $('q-opts').innerHTML=[0,1,2,3].map(i=>`<div class="border rounded-lg p-2.5 bg-w
 $('f-q').addEventListener('submit',async e=>{e.preventDefault();const o=[0,1,2,3].map(i=>$('q-'+i).value.trim());
 if(!currentPaket) return toast('Pilih atau buat paket soal terlebih dahulu', 'err');
 if([0,1,2,3].some(i=>!o[i]&&!oImg[i]))return toast('Setiap opsi harus berisi teks atau gambar','err');
-
-// Ambil jawaban yang dipilih radio button
 const ansRad = document.querySelector('input[name="q-ans"]:checked');
 const answer = ansRad ? parseInt(ansRad.value) : 0;
-
 const d={text:$('q-t').value,options:o,optImages:oImg.map(x=>x||null),answer,image:qImg||null,paketId:currentPaket.id,teacherId:T.username};
 busy('Menyimpan soal...');try{if(editId){await setDoc(D('questions',editId),{...d,updatedAt:new Date().toISOString()},{merge:true});toast('Soal diperbarui')}else{await setDoc(doc(C('questions')),{...d,createdAt:new Date().toISOString()});toast('Soal ditambahkan')}resetForm()}catch(x){toast(fmtErr(x),'err')}busy()});
 
@@ -704,13 +675,30 @@ function rR(){
     }
     
     $('print-paket-name').textContent = `Paket: ${pkt.name} | Kelas: ${pkt.classes.join(', ')} | Mata Pelajaran: ${T.mapel}`;
-    const r=resRows(),done=r.filter(x=>x.e?.status==='submitted'),sc=done.map(x=>x.e.score),kkm=pkt.kkm??70;
-    
+    const r=resRows();
+    const kkm=pkt.kkm??70;
+    const qList = S.questions.filter(q=>q.paketId===pkt.id);
+    const qCount = qList.length;
+    const now = Date.now();
+
+    // AUTO-SUBMIT CERDAS VIA DASHBOARD GURU
+    r.forEach(({s, e}) => {
+        if(e && e.status === 'in_progress') {
+            const end = e.startedAt + ((pkt.duration||60) * 60000);
+            if(now > end + 3000 && !e._locking) {
+                e._locking = true; // Kunci agar tidak berulang
+                const ans = e.answers || {};
+                const correct = qList.filter(q => ans[q.id] === q.answer).length;
+                const score = qCount > 0 ? Math.round(correct/qCount*100) : 0;
+                setDoc(D('exams', e.id), {status:'submitted', score, correct, total:qCount, submittedAt:new Date().toISOString(), auto_closed_by_system:true}, {merge:true}).catch(()=>e._locking=false);
+            }
+        }
+    });
+
+    const done=r.filter(x=>x.e?.status==='submitted'),sc=done.map(x=>x.e.score);
     const box=(l,v)=>`<div class="bg-gray-50 border rounded-lg p-3 text-center"><p class="text-xs text-gray-500">${l}</p><p class="text-xl font-bold">${v}</p></div>`;
     $('stats').innerHTML=box('Peserta',r.length)+box('Selesai',done.length)+box('Rata-rata',sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):'-')+box('Tertinggi / Terendah',sc.length?`${Math.max(...sc)} / ${Math.min(...sc)}`:'-')+box('Lulus',sc.length?`${sc.filter(x=>x>=kkm).length}/${sc.length}`:'-');
-    
     const bd={'Belum mulai':'bg-gray-100 text-gray-600','Mengerjakan':'bg-yellow-100 text-yellow-700','Selesai':'bg-green-100 text-green-700'};
-    const qCount = S.questions.filter(q=>q.paketId===pkt.id).length;
 
     $('tb-r').innerHTML=r.map(({s,e})=> {
         let sisaWaktu = '-', sisaSoal = '-', timerAttr = '';
@@ -761,10 +749,8 @@ async function prepareExam(nisn, tok) {
     const ex = es.exists() ? es.data() : {};
     if(ex.status === 'submitted') throw 'Anda sudah mengumpulkan ujian ini.';
 
-    // Simpan data ke variabel global agar bisa dipakai setelah menekan "Mulai Ujian"
     prepData = {nisn, tok, pkt, s, t, id, ex};
 
-    // Tampilkan Data Konfirmasi
     $('cf-nisn').textContent = s.nisn;
     $('cf-name').textContent = s.name;
     $('cf-kelas').textContent = s.class;
@@ -775,7 +761,6 @@ async function prepareExam(nisn, tok) {
     view('v-confirm');
 }
 
-// Tombol Mulai Ujian dari Halaman Konfirmasi
 $('cf-btn').addEventListener('click', async () => {
     const b = $('cf-btn'); b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Memuat...';
     try {
@@ -787,7 +772,6 @@ $('cf-btn').addEventListener('click', async () => {
     }
 });
 
-// Fungsi untuk memulai layar penuh & render soal (Dipakai oleh tombol Mulai & Auto-Resume)
 async function startConfirmedExam(silentData, isSilentResume) {
     const data = silentData || prepData;
     if(!data) throw 'Data sesi tidak valid, silakan muat ulang halaman.';
@@ -818,7 +802,7 @@ async function startConfirmedExam(silentData, isSilentResume) {
     
     view('v-exam');
     renderQ();
-    tick();
+    tick(); // Jalankan sekali agar kalau langsung expired akan otomatis disubmit detik ini juga
     
     U.timer = setInterval(tick, 1000);
     U.retry = setInterval(() => { if(U.dirty) save() }, 15000);
@@ -838,14 +822,47 @@ function renderQ(){
 
 function ind(k){$('e-save').innerHTML=k==='saving'?'<i class="fas fa-spinner fa-spin"></i> Menyimpan':k==='ok'?'<span class="text-green-600"><i class="fas fa-check-circle"></i> Tersimpan</span>':'<span class="text-red-600"><i class="fas fa-triangle-exclamation"></i> Gagal simpan, mencoba lagi...</span>'}
 async function save(extra={}){if(!U.on)return;ind('saving');try{await setDoc(D('exams',U.id),{answers:U.ans,flags:U.flags,violations:U.viol,lastUpdated:new Date().toISOString(),...extra},{merge:true});U.dirty=false;ind('ok');return true}catch{U.dirty=true;ind('err');return false}}
-function tick(){const r=Math.max(0,Math.floor((U.end-Date.now())/1000)),el=$('e-timer');el.textContent=`${String(Math.floor(r/60)).padStart(2,'0')}:${String(r%60).padStart(2,'0')}`;el.classList.toggle('text-red-600',r<=300);if(r<=0&&U.on){toast('Waktu habis, jawaban dikumpulkan otomatis.','warn');finish()}}
-async function finish(){if(!U.on)return;U.on=false;clearInterval(U.timer);clearInterval(U.retry);
-const total=U.qs.length,correct=U.qs.filter(q=>U.ans[q.id]===q.answer).length,score=Math.round(correct/total*100);
-let ok=false;for(let i=0;i<3&&!ok;i++){U.on=true;ok=await save({status:'submitted',score,correct,total,submittedAt:new Date().toISOString()});U.on=false;if(!ok)await new Promise(r=>setTimeout(r,1500))}
-if(!ok){U.on=true;U.timer=setInterval(tick,1000);return toast('Gagal mengirim jawaban. Periksa koneksi lalu tekan Kumpulkan lagi.','err')}
-store.clear();try{if(document.fullscreenElement)await document.exitFullscreen()}catch{}
-if(U.pkt.showScore!==false){const kkm=U.pkt.kkm??70;$('r-score').classList.remove('hidden');$('r-val').textContent=score;$('r-note').innerHTML=`${correct} dari ${total} benar &middot; <b class="${score>=kkm?'text-green-600':'text-red-600'}">${score>=kkm?'Lulus':'Belum lulus'}</b>`}
-view('v-result')}
+
+// AUTO-SUBMIT SISWA (BERJALAN JIKA BROWSER TERBUKA)
+function tick(){
+    const r=Math.max(0,Math.floor((U.end-Date.now())/1000));
+    const el=$('e-timer');
+    el.textContent=`${String(Math.floor(r/60)).padStart(2,'0')}:${String(r%60).padStart(2,'0')}`;
+    el.classList.toggle('text-red-600',r<=300);
+    if(r<=0 && U.on){
+        toast('Waktu habis, jawaban dikumpulkan otomatis.','warn');
+        finish();
+    }
+}
+
+async function finish(){
+    if(!U.on)return;
+    U.on=false;
+    clearInterval(U.timer);
+    clearInterval(U.retry);
+    const total=U.qs.length,correct=U.qs.filter(q=>U.ans[q.id]===q.answer).length,score=Math.round(correct/total*100);
+    let ok=false;
+    for(let i=0;i<3&&!ok;i++){
+        U.on=true;
+        ok=await save({status:'submitted',score,correct,total,submittedAt:new Date().toISOString()});
+        U.on=false;
+        if(!ok)await new Promise(r=>setTimeout(r,1500));
+    }
+    if(!ok){
+        U.on=true;
+        U.timer=setInterval(tick,1000);
+        return toast('Gagal mengirim jawaban. Periksa koneksi lalu tekan Kumpulkan lagi.','err');
+    }
+    store.clear();
+    try{if(document.fullscreenElement)await document.exitFullscreen()}catch{}
+    if(U.pkt.showScore!==false){
+        const kkm=U.pkt.kkm??70;
+        $('r-score').classList.remove('hidden');
+        $('r-val').textContent=score;
+        $('r-note').innerHTML=`${correct} dari ${total} benar &middot; <b class="${score>=kkm?'text-green-600':'text-red-600'}">${score>=kkm?'Lulus':'Belum lulus'}</b>`;
+    }
+    view('v-result');
+}
 
 // ===== PENGAWASAN TAMPILAN MATI =====
 document.addEventListener('visibilitychange',()=>{
