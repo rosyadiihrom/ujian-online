@@ -278,9 +278,9 @@ const ask=(t,d,fn)=>{$('m-t').textContent=t;$('m-d').textContent=d;const m=$('mo
 const fmtErr=e=>typeof e==='string'?e:(e?.code==='permission-denied'?'Akses ditolak oleh aturan Firestore.':'Terjadi kesalahan jaringan/server.');
 
 let S={students:[],teachers:[],questions:[],exams:[],classes:[],packets:[]},T=null,subs=[],role=null,U={on:false},fails=0,lockUntil=0;
-let currentPaket = null;
+let currentPaket = null, timerIntervalGuru = null;
 let prepData = null; // Menyimpan data sementara untuk layar konfirmasi
-const stop=()=>{subs.forEach(f=>f());subs=[]};
+const stop=()=>{subs.forEach(f=>f());subs=[];if(timerIntervalGuru)clearInterval(timerIntervalGuru);};
 
 // ===== INIT & ROUTING =====
 (async()=>{const slow=setTimeout(()=>{$('ld-msg').innerHTML='Memuat terlalu lama. Periksa koneksi internet. <button onclick="location.reload()" class="underline font-semibold ml-1">Muat ulang</button>'},15000);
@@ -685,6 +685,17 @@ function resRows(){
 
 $('r-paket-sel').addEventListener('change', rR);
 
+// Menghitung sisa waktu siswa untuk ditampilkan di tabel guru
+function getRemainingTimeStr(e, dur) {
+    if (!e || e.status !== 'in_progress' || !e.startedAt || !dur) return '';
+    const end = e.startedAt + (dur * 60000);
+    const r = Math.max(0, Math.floor((end - Date.now()) / 1000));
+    if (r <= 0) return '<span class="text-red-500 font-bold">Waktu Habis</span>';
+    const m = Math.floor(r / 60);
+    const s = r % 60;
+    return `<span class="text-blue-600 font-medium whitespace-nowrap"><i class="fas fa-clock mr-1"></i>${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}</span>`;
+}
+
 function rR(){
     if(!T||!$('tb-r'))return;
     const pId = $('r-paket-sel').value;
@@ -694,6 +705,7 @@ function rR(){
         $('stats').innerHTML = '';
         $('tb-r').innerHTML = '<tr><td colspan="8" class="text-center text-gray-400 py-8"><i class="fas fa-hand-pointer text-3xl mb-2 opacity-50 block"></i>Silakan pilih paket ujian terlebih dahulu.</td></tr>';
         $('print-paket-name').textContent = '';
+        if(timerIntervalGuru) clearInterval(timerIntervalGuru);
         return;
     }
     
@@ -704,7 +716,19 @@ function rR(){
     $('stats').innerHTML=box('Peserta',r.length)+box('Selesai',done.length)+box('Rata-rata',sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):'-')+box('Tertinggi / Terendah',sc.length?`${Math.max(...sc)} / ${Math.min(...sc)}`:'-')+box('Lulus',sc.length?`${sc.filter(x=>x>=kkm).length}/${sc.length}`:'-');
     
     const bd={'Belum mulai':'bg-gray-100 text-gray-600','Mengerjakan':'bg-yellow-100 text-yellow-700','Selesai':'bg-green-100 text-green-700'};
-    $('tb-r').innerHTML=r.map(({s,e})=>`<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td><span class="px-2 py-1 rounded-lg text-xs font-bold ${bd[st(e)]}">${st(e)}</span></td><td>${e?.status==='submitted'?`${e.correct}/${e.total}`:'-'}</td><td class="font-bold ${e?.score>=kkm?'text-green-600':'text-red-600'}">${e?.status==='submitted'?e.score:'-'}</td><td>${e?.violations?`<span class="text-red-600 font-semibold">${e.violations}</span>`:'0'}</td><td class="no-print">${e?`<button data-a="reset" data-id="${esc(e.id)}" class="text-xs text-red-600 underline hover:text-red-800">Reset</button>`:''}</td></tr>`).join('')||'<tr><td colspan="8" class="text-center text-gray-400 py-4">Belum ada siswa di kelas Anda.</td></tr>'
+    
+    const renderTable = () => {
+        $('tb-r').innerHTML=r.map(({s,e})=>`<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td>
+        <td><div class="flex flex-col gap-1"><span class="px-2 py-1 rounded-lg text-xs font-bold inline-block w-fit ${bd[st(e)]}">${st(e)}</span>${e?.status==='in_progress'?getRemainingTimeStr(e, pkt.duration):''}</div></td>
+        <td>${e?.status==='submitted'?`${e.correct}/${e.total}`:'-'}</td><td class="font-bold ${e?.score>=kkm?'text-green-600':'text-red-600'}">${e?.status==='submitted'?e.score:'-'}</td><td>${e?.violations?`<span class="text-red-600 font-semibold">${e.violations}</span>`:'0'}</td><td class="no-print">${e?`<button data-a="reset" data-id="${esc(e.id)}" class="text-xs text-red-600 underline hover:text-red-800">Reset</button>`:''}</td></tr>`).join('')||'<tr><td colspan="8" class="text-center text-gray-400 py-4">Belum ada siswa di kelas Anda.</td></tr>';
+    };
+    
+    renderTable();
+    
+    if(timerIntervalGuru) clearInterval(timerIntervalGuru);
+    if(r.some(x => x.e?.status === 'in_progress')) {
+        timerIntervalGuru = setInterval(renderTable, 60000); // Perbarui sisa waktu setiap 1 menit (tidak perlu setiap detik agar tidak berat)
+    }
 }
 
 // ===== SISWA / UJIAN (VALIDASI & KONFIRMASI) =====
