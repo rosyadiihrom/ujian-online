@@ -223,7 +223,7 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
         <div id="stats" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 no-print"></div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead><tr><th class="border-b">NISN</th><th class="border-b">Nama</th><th class="border-b">Kelas</th><th class="border-b">Status</th><th class="border-b">Benar</th><th class="border-b">Nilai</th><th class="border-b">Pelanggaran</th><th class="no-print"></th></tr></thead>
+                <thead><tr><th class="border-b">NISN</th><th class="border-b">Nama</th><th class="border-b">Kelas</th><th class="border-b">Status</th><th class="border-b">Sisa Waktu</th><th class="border-b">Sisa Soal</th><th class="border-b">Benar</th><th class="border-b">Nilai</th><th class="border-b">Pelanggaran</th><th class="no-print"></th></tr></thead>
                 <tbody id="tb-r" class="divide-y"></tbody>
             </table>
         </div>
@@ -278,9 +278,9 @@ const ask=(t,d,fn)=>{$('m-t').textContent=t;$('m-d').textContent=d;const m=$('mo
 const fmtErr=e=>typeof e==='string'?e:(e?.code==='permission-denied'?'Akses ditolak oleh aturan Firestore.':'Terjadi kesalahan jaringan/server.');
 
 let S={students:[],teachers:[],questions:[],exams:[],classes:[],packets:[]},T=null,subs=[],role=null,U={on:false},fails=0,lockUntil=0;
-let currentPaket = null, timerIntervalGuru = null;
+let currentPaket = null;
 let prepData = null; // Menyimpan data sementara untuk layar konfirmasi
-const stop=()=>{subs.forEach(f=>f());subs=[];if(timerIntervalGuru)clearInterval(timerIntervalGuru);};
+const stop=()=>{subs.forEach(f=>f());subs=[]};
 
 // ===== INIT & ROUTING =====
 (async()=>{const slow=setTimeout(()=>{$('ld-msg').innerHTML='Memuat terlalu lama. Periksa koneksi internet. <button onclick="location.reload()" class="underline font-semibold ml-1">Muat ulang</button>'},15000);
@@ -442,7 +442,13 @@ dlRes(){
     const r=resRows();
     if(!r.length || !r.some(x=>x.e)) return toast('Belum ada data nilai pada paket ini','err');
     const pkt = r[0].pkt;
-    dl(r.map(({s,e})=>({NISN:s.nisn,Nama:s.name,Kelas:s.class,Status:st(e),Benar:e?.correct??'',Total:e?.total??'',Nilai:e?.score??'',Keterangan:e?.status==='submitted'?(e.score>=(pkt.kkm??70)?'Lulus':'Belum lulus'):'',Pelanggaran:e?.violations??''})),'Hasil',`Hasil_${pkt.name}_${pkt.classes.join('-')}.xlsx`.replace(/\s+/g,'_'));
+    const qCount = S.questions.filter(q=>q.paketId===pkt.id).length;
+    dl(r.map(({s,e})=>{
+        let ansCount = e?.answers ? Object.keys(e.answers).length : 0;
+        return {NISN:s.nisn,Nama:s.name,Kelas:s.class,Status:st(e),
+                'Sisa Soal': e?.status==='in_progress' ? Math.max(0, qCount - ansCount) : 0,
+                Benar:e?.correct??'',Total:e?.total??'',Nilai:e?.score??'',Keterangan:e?.status==='submitted'?(e.score>=(pkt.kkm??70)?'Lulus':'Belum lulus'):'',Pelanggaran:e?.violations??''}
+    }),'Hasil',`Hasil_${pkt.name}_${pkt.classes.join('-')}.xlsx`.replace(/\s+/g,'_'));
 },
 printRes(){
     if(!$('r-paket-sel').value) return toast('Pilih paket ujian terlebih dahulu', 'err');
@@ -685,17 +691,6 @@ function resRows(){
 
 $('r-paket-sel').addEventListener('change', rR);
 
-// Menghitung sisa waktu siswa untuk ditampilkan di tabel guru
-function getRemainingTimeStr(e, dur) {
-    if (!e || e.status !== 'in_progress' || !e.startedAt || !dur) return '';
-    const end = e.startedAt + (dur * 60000);
-    const r = Math.max(0, Math.floor((end - Date.now()) / 1000));
-    if (r <= 0) return '<span class="text-red-500 font-bold">Waktu Habis</span>';
-    const m = Math.floor(r / 60);
-    const s = r % 60;
-    return `<span class="text-blue-600 font-medium whitespace-nowrap"><i class="fas fa-clock mr-1"></i>${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}</span>`;
-}
-
 function rR(){
     if(!T||!$('tb-r'))return;
     const pId = $('r-paket-sel').value;
@@ -703,9 +698,8 @@ function rR(){
     
     if(!pId) {
         $('stats').innerHTML = '';
-        $('tb-r').innerHTML = '<tr><td colspan="8" class="text-center text-gray-400 py-8"><i class="fas fa-hand-pointer text-3xl mb-2 opacity-50 block"></i>Silakan pilih paket ujian terlebih dahulu.</td></tr>';
+        $('tb-r').innerHTML = '<tr><td colspan="10" class="text-center text-gray-400 py-8"><i class="fas fa-hand-pointer text-3xl mb-2 opacity-50 block"></i>Silakan pilih paket ujian terlebih dahulu.</td></tr>';
         $('print-paket-name').textContent = '';
-        if(timerIntervalGuru) clearInterval(timerIntervalGuru);
         return;
     }
     
@@ -716,19 +710,23 @@ function rR(){
     $('stats').innerHTML=box('Peserta',r.length)+box('Selesai',done.length)+box('Rata-rata',sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):'-')+box('Tertinggi / Terendah',sc.length?`${Math.max(...sc)} / ${Math.min(...sc)}`:'-')+box('Lulus',sc.length?`${sc.filter(x=>x>=kkm).length}/${sc.length}`:'-');
     
     const bd={'Belum mulai':'bg-gray-100 text-gray-600','Mengerjakan':'bg-yellow-100 text-yellow-700','Selesai':'bg-green-100 text-green-700'};
-    
-    const renderTable = () => {
-        $('tb-r').innerHTML=r.map(({s,e})=>`<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td>
-        <td><div class="flex flex-col gap-1"><span class="px-2 py-1 rounded-lg text-xs font-bold inline-block w-fit ${bd[st(e)]}">${st(e)}</span>${e?.status==='in_progress'?getRemainingTimeStr(e, pkt.duration):''}</div></td>
-        <td>${e?.status==='submitted'?`${e.correct}/${e.total}`:'-'}</td><td class="font-bold ${e?.score>=kkm?'text-green-600':'text-red-600'}">${e?.status==='submitted'?e.score:'-'}</td><td>${e?.violations?`<span class="text-red-600 font-semibold">${e.violations}</span>`:'0'}</td><td class="no-print">${e?`<button data-a="reset" data-id="${esc(e.id)}" class="text-xs text-red-600 underline hover:text-red-800">Reset</button>`:''}</td></tr>`).join('')||'<tr><td colspan="8" class="text-center text-gray-400 py-4">Belum ada siswa di kelas Anda.</td></tr>';
-    };
-    
-    renderTable();
-    
-    if(timerIntervalGuru) clearInterval(timerIntervalGuru);
-    if(r.some(x => x.e?.status === 'in_progress')) {
-        timerIntervalGuru = setInterval(renderTable, 60000); // Perbarui sisa waktu setiap 1 menit (tidak perlu setiap detik agar tidak berat)
-    }
+    const qCount = S.questions.filter(q=>q.paketId===pkt.id).length;
+
+    $('tb-r').innerHTML=r.map(({s,e})=> {
+        let sisaWaktu = '-', sisaSoal = '-', timerAttr = '';
+        if (e && e.status === 'in_progress') {
+            const end = e.startedAt + ((pkt.duration||60) * 60000);
+            timerAttr = `class="rt-timer font-mono font-semibold text-blue-600" data-end="${end}"`;
+            sisaWaktu = '...';
+            const ansCount = e.answers ? Object.keys(e.answers).length : 0;
+            const notAns = Math.max(0, qCount - ansCount);
+            sisaSoal = notAns > 0 ? `<span class="font-bold text-red-600">${notAns}</span> / ${qCount}` : `0 / ${qCount}`;
+        } else if (e && e.status === 'submitted') {
+            sisaWaktu = 'Selesai';
+            sisaSoal = '-';
+        }
+        return `<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td><span class="px-2 py-1 rounded-lg text-xs font-bold ${bd[st(e)]}">${st(e)}</span></td><td ${timerAttr}>${sisaWaktu}</td><td>${sisaSoal}</td><td>${e?.status==='submitted'?`${e.correct}/${e.total}`:'-'}</td><td class="font-bold ${e?.score>=kkm?'text-green-600':'text-red-600'}">${e?.status==='submitted'?e.score:'-'}</td><td>${e?.violations?`<span class="text-red-600 font-semibold">${e.violations}</span>`:'0'}</td><td class="no-print">${e?`<button data-a="reset" data-id="${esc(e.id)}" class="text-xs text-red-600 underline hover:text-red-800">Reset</button>`:''}</td></tr>`;
+    }).join('')||'<tr><td colspan="10" class="text-center text-gray-400 py-4">Belum ada siswa di kelas Anda.</td></tr>'
 }
 
 // ===== SISWA / UJIAN (VALIDASI & KONFIRMASI) =====
@@ -867,4 +865,20 @@ document.addEventListener('visibilitychange',()=>{
 });
 ['copy','cut','paste','contextmenu'].forEach(ev=>document.addEventListener(ev,e=>{if(U.on)e.preventDefault()}));
 addEventListener('beforeunload',e=>{if(U.on){e.preventDefault();e.returnValue=''}});
+
+// ===== TIMER SISA WAKTU REALTIME GURU =====
+setInterval(() => {
+    document.querySelectorAll('.rt-timer').forEach(el => {
+        const end = parseInt(el.getAttribute('data-end'));
+        if(isNaN(end)) return;
+        const r = Math.max(0, Math.floor((end - Date.now()) / 1000));
+        if (r <= 0) {
+            el.textContent = '00:00 (Habis)';
+            el.classList.replace('text-blue-600', 'text-red-600');
+        } else {
+            el.textContent = `${String(Math.floor(r/60)).padStart(2,'0')}:${String(r%60).padStart(2,'0')}`;
+        }
+    });
+}, 1000);
+
 </script></body></html>
