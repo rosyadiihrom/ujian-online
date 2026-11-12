@@ -219,7 +219,7 @@ const mk=(t,rows)=>({empty:!rows.length,docs:rows.map(x=>({id:x[pk(t)],data:()=>
 const fetchAll=async(t,w)=>{let out=[];for(let f=0;;f+=1000){let q=sb.from(t).select('*').order(pk(t)).range(f,f+999);w.forEach(([k,v])=>q=q.eq(k,v));const{data}=ck(await q);out=out.concat(data);if(data.length<1000)return out}};
 const getDoc=async r=>{const{data}=ck(await sb.from(r.t).select('*').eq(pk(r.t),r.id).maybeSingle());return{exists:()=>!!data,id:r.id,data:()=>data||undefined}};
 const getDocs=async q=>mk(q.t,await fetchAll(q.t,q.w||[]));
-const setDoc=async(r,d)=>{ck(await sb.from(r.t).upsert({...d,[pk(r.t)]:r.id}))};
+const setDoc=async(r,d)=>{const{data}=ck(await sb.from(r.t).update(d).eq(pk(r.t),r.id).select(pk(r.t)));if(!data.length)ck(await sb.from(r.t).insert({...d,[pk(r.t)]:r.id}))};
 const deleteDoc=async r=>{ck(await sb.from(r.t).delete().eq(pk(r.t),r.id))};
 const writeBatch=()=>{const ops=[];return{set:(r,d)=>ops.push(['s',r,d]),delete:r=>ops.push(['d',r]),async commit(){const s={},x={};
 ops.forEach(([k,r,d])=>k==='s'?(s[r.t]??=[]).push({...d,[pk(r.t)]:r.id}):(x[r.t]??=[]).push(r.id));
