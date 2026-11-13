@@ -250,55 +250,74 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <button onclick="location.reload()" class="mt-6 text-blue-600 underline">Kembali ke beranda</button></div></div></main>
 
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
 
-// Gunakan hanya Publishable Key di browser. Secret Key tidak boleh berada di file HTML.
-const SUPABASE_URL = "https://oburucfsjncuqpifuqzs.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_SsIK6AWtBKbGKD8-Y3sPZw_HaITRJsY";
-const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-});
-let currentApiToken = null;
-let studentSessionActive = false;
-const db = {}; // kompatibilitas adapter Supabase lama
-const D=(...p)=>({kind:'doc',path:p.join('/')});
-const C=(...p)=>({kind:'collection',path:p.join('/')});
-const doc=(ref,id)=>({kind:'doc',path:id===undefined?`${ref.path}/${crypto.randomUUID()}`:`${ref.path}/${id}`});
-const where=(field,op,value)=>({field,op,value});
-const query=(ref,...filters)=>({...ref,filters});
-const apiRequest=async(body,tokenOverride=null)=>{
-  let token=tokenOverride;
-  if(body.action==='student_login') token=null;
-  else if(!studentSessionActive){const {data}=await supabase.auth.getSession();token=data.session?.access_token||tokenOverride;}
-  else token=currentApiToken;
-  if(body.action!=='student_login'&&!token) throw new Error('Sesi tidak tersedia. Silakan masuk kembali.');
-  const headers={'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY};
-  if(token) headers.Authorization=`Bearer ${token}`;
-  const response=await fetch(`${SUPABASE_URL}/functions/v1/exam-api`,{
-    method:'POST', headers, body:JSON.stringify(body)
-  });
-  const result=await response.json().catch(()=>({error:'Respons server tidak valid.'}));
-  if(!response.ok) throw new Error(result.error||`Server merespons ${response.status}`);
-  return result.data;
-};
-const getDoc=async ref=>{const r=await apiRequest({action:'db',op:'get',path:ref.path});return {id:ref.path.split('/').pop(),exists:()=>!!r,data:()=>r?.data??{}}};
-const getDocs=async ref=>{const rows=await apiRequest({action:'db',op:'list',path:ref.path,filters:ref.filters||[]});const docs=(rows||[]).map(x=>({id:x.id,data:()=>x.data}));return {docs,empty:docs.length===0,size:docs.length,forEach:fn=>docs.forEach(fn)}};
-const setDoc=async(ref,data,options={})=>apiRequest({action:'db',op:'set',path:ref.path,data,merge:!!options.merge});
-const deleteDoc=async ref=>apiRequest({action:'db',op:'delete',path:ref.path});
-const onSnapshot=(ref,callback,onError)=>{
-  let stopped=false,running=false,last='';
-  const pull=async()=>{if(stopped||running)return;running=true;try{
-    let snap;
-    if(ref.kind==='doc') snap=await getDoc(ref);
-    else snap=await getDocs(ref);
-    const signature=JSON.stringify(ref.kind==='doc'?(snap.exists()?snap.data():null):snap.docs.map(d=>[d.id,d.data()]));
-    if(signature!==last){last=signature;callback(snap)}
-  }catch(e){if(onError)onError(e);else console.error(e)}finally{running=false}};
-  pull();const timer=setInterval(pull,5000);return ()=>{stopped=true;clearInterval(timer)};
-};
-const writeBatch=()=>{const items=[];return {set(ref,data,options={}){items.push({type:'set',path:ref.path,data,merge:!!options.merge});return this},delete(ref){items.push({type:'delete',path:ref.path});return this},async commit(){return apiRequest({action:'db',op:'batch',items})}}};
-const deleteField=()=>null;
-const batchSet=async items=>{for(let i=0;i<items.length;i+=300){const b=writeBatch();items.slice(i,i+300).forEach(([r,d])=>b.set(r,d,{merge:true}));await b.commit()}};
+// ===== SUPABASE CONFIG =====
+const SUPABASE_URL="https://hrskhhdkozphpsyjsnee.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_Te7LujOJbKOZDhajOuGKOg_GVOe5WxE";
+const sb=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+const TBL='app_docs';
+
+// ===== ADAPTER: API gaya Firestore di atas Supabase (tabel app_docs: col, id, data jsonb) =====
+const DEL='__DELETE_FIELD__';
+const deleteField=()=>DEL;
+const chk=r=>{if(r.error){const e=new Error(r.error.message);e.code=r.error.code==='42501'?'permission-denied':r.error.code;throw e}return r};
+const C=col=>({type:'col',col});
+const D=(col,id)=>({type:'doc',col,id});
+const doc=ref=>({type:'doc',col:ref.col,id:crypto.randomUUID().replace(/-/g,'').slice(0,20)});
+const where=(f,op,v)=>({f,op,v});
+const query=(c,...w)=>({type:'q',col:c.col,w});
+const mkDoc=r=>({id:r.id,exists:()=>true,data:()=>r.data});
+const mkSnap=rows=>{const docs=rows.map(mkDoc);return{docs,empty:!docs.length,size:docs.length}};
+async function fetchRows(ref){
+  const PG=1000,all=[];
+  for(let from=0;;from+=PG){
+    let rq=sb.from(TBL).select('id,data').eq('col',ref.col);
+    if(ref.type==='doc')rq=rq.eq('id',ref.id);
+    (ref.w||[]).forEach(x=>{rq=rq.eq('data->>'+x.f,String(x.v))});
+    const r=chk(await rq.order('id').range(from,from+PG-1));
+    all.push(...r.data);
+    if(r.data.length<PG||ref.type==='doc')break;
+  }
+  return all;
+}
+const getDoc=async ref=>{const r=(await fetchRows(ref))[0];return{id:ref.id,exists:()=>!!r,data:()=>r?r.data:undefined}};
+const getDocs=async q=>mkSnap(await fetchRows(q));
+const setDoc=async(ref,data,opts)=>{chk(await sb.rpc('app_doc_set',{p_col:ref.col,p_id:ref.id,p_data:data,p_merge:!!(opts&&opts.merge)}))};
+const deleteDoc=async ref=>{chk(await sb.from(TBL).delete().eq('col',ref.col).eq('id',ref.id))};
+const writeBatch=()=>{const sets=[],dels=[];return{
+  set(ref,data){sets.push({col:ref.col,id:ref.id,data});return this},
+  delete(ref){dels.push(ref);return this},
+  async commit(){
+    if(sets.length)chk(await sb.from(TBL).upsert(sets,{onConflict:'col,id'}));
+    const by={};dels.forEach(r=>(by[r.col]??=[]).push(r.id));
+    for(const c in by)chk(await sb.from(TBL).delete().eq('col',c).in('id',by[c]));
+  }}};
+function onSnapshot(ref,cb,ecb){
+  let alive=true,rows=new Map(),ch=null,timer=null;
+  const match=r=>ref.type==='doc'?r.id===ref.id:(ref.w||[]).every(x=>String(r.data?.[x.f])===String(x.v));
+  const emit=()=>{if(!alive)return;
+    if(ref.type==='doc'){const r=rows.get(ref.id);cb({id:ref.id,exists:()=>!!r,data:()=>r?r.data:undefined})}
+    else cb(mkSnap([...rows.values()]))};
+  const load=async()=>{try{const r=await fetchRows(ref);if(!alive)return;rows=new Map(r.map(x=>[x.id,x]));emit()}catch(e){if(alive&&ecb)ecb(e)}};
+  ch=sb.channel('rt-'+ref.col+'-'+Math.random().toString(36).slice(2))
+    .on('postgres_changes',{event:'*',schema:'public',table:TBL,filter:'col=eq.'+ref.col},p=>{
+      if(!alive)return;
+      if(p.eventType==='DELETE'){const o=p.old||{};if(o.col&&o.col!==ref.col)return;if(o.id&&rows.delete(o.id))emit();return}
+      const n=p.new;if(!n||n.col!==ref.col)return;
+      if(ref.type==='doc'&&n.id!==ref.id)return;
+      if(match(n))rows.set(n.id,n);else rows.delete(n.id);
+      emit();
+    })
+    .subscribe(st=>{
+      if(st==='SUBSCRIBED')load();
+      else if((st==='CHANNEL_ERROR'||st==='TIMED_OUT')&&ecb)ecb(new Error('realtime '+st));
+    });
+  timer=setInterval(load,60000); // jaring pengaman bila ada event realtime terlewat
+  return()=>{alive=false;clearInterval(timer);if(ch)sb.removeChannel(ch)};
+}
+
+let db=null;
 const $=id=>document.getElementById(id);
 const store=(()=>{const K='ujianSes',rd=()=>{for(const m of[()=>localStorage.getItem(K),()=>sessionStorage.getItem(K),()=>{const c=document.cookie.split('; ').find(x=>x.startsWith(K+'='));return c&&decodeURIComponent(c.slice(K.length+1))},()=>window.name.startsWith(K+'=')?decodeURIComponent(window.name.slice(K.length+1)):null]){try{const v=m();if(v)return v}catch{}}return null};
 return{get(){try{return JSON.parse(rd())}catch{return null}},set(v){const j=JSON.stringify(v);try{localStorage.setItem(K,j)}catch{}try{sessionStorage.setItem(K,j)}catch{}try{document.cookie=K+'='+encodeURIComponent(j)+';path=/;max-age=43200;SameSite=None;Secure'}catch{}try{window.name=K+'='+encodeURIComponent(j)}catch{}},
@@ -312,11 +331,12 @@ const g=(r,...ks)=>{for(const k in r)if(ks.includes(norm(k)))return r[k]};
 const seed=s=>{let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}};
 const shuf=(a,r)=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const readXlsx=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=e=>{try{const w=XLSX.read(new Uint8Array(e.target.result),{type:'array'});ok(XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]]))}catch(x){no(x)}};r.readAsArrayBuffer(f)});
+const batchSet=async items=>{for(let i=0;i<items.length;i+=400){const b=writeBatch(db);items.slice(i,i+400).forEach(([r,d])=>b.set(r,d));await b.commit()}};
 const toast=(m,t='ok')=>{const e=document.createElement('div');e.className=`${t==='err'?'bg-red-600':t==='warn'?'bg-yellow-500':'bg-green-600'} text-white px-4 py-3 rounded-lg shadow-lg text-sm max-w-xs`;e.textContent=m;$('toasts').appendChild(e);setTimeout(()=>e.remove(),4000)};
 const busy=m=>{const b=$('busy');if(m){$('busy-m').textContent=m;b.classList.replace('hidden','flex')}else b.classList.replace('flex','hidden')};
 const view=id=>{document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));$(id).classList.add('on');scrollTo(0,0)};
 const ask=(t,d,fn)=>{$('m-t').textContent=t;$('m-d').textContent=d;const m=$('modal');m.classList.replace('hidden','flex');$('m-n').onclick=()=>m.classList.replace('flex','hidden');$('m-y').onclick=()=>{m.classList.replace('flex','hidden');fn()}};
-const fmtErr=e=>typeof e==='string'?e:(e?.message|| (e?.code==='permission-denied'?'Akses ditolak oleh server Supabase.':'Terjadi kesalahan jaringan/server.'));
+const fmtErr=e=>typeof e==='string'?e:(e?.code==='permission-denied'?'Akses ditolak oleh aturan database (RLS Supabase).':'Terjadi kesalahan jaringan/server.');
 
 let S={students:[],teachers:[],questions:[],exams:[],classes:[],packets:[]},T=null,subs=[],role=null,U={on:false},fails=0,lockUntil=0;
 let currentPaket = null;
@@ -324,46 +344,39 @@ let prepData = null;
 const stop=()=>{subs.forEach(f=>f());subs=[]};
 
 // ===== INIT & ROUTING =====
-(async()=>{const slow=setTimeout(()=>$('ld-msg').textContent='Memuat terlalu lama. Periksa koneksi internet.',15000);
-try{$('ld-msg').textContent='Menghubungkan ke Supabase...';$('ld-msg').textContent='Memeriksa sesi...';await resume()}catch(e){console.error(e);toast(e.message||'Gagal menginisialisasi sistem','err')}
+(async()=>{const slow=setTimeout(()=>{$('ld-msg').innerHTML='Memuat terlalu lama. Periksa koneksi internet. <button onclick="location.reload()" class="underline font-semibold ml-1">Muat ulang</button>'},15000);
+try{$('ld-msg').textContent='Menghubungkan ke server...';const ping=await sb.from(TBL).select('id').limit(1);if(ping.error)throw ping.error;$('ld-msg').textContent='Memeriksa sesi...';await resume()}catch(e){console.error(e);toast('Gagal menginisialisasi sistem','err')}
 clearTimeout(slow);const L=$('loader');L.style.transition='opacity .4s';L.style.opacity=0;setTimeout(()=>L.remove(),400)})();
 
 async function resume(){
-  const saved=store.get();
-  if(saved?.role==='student'&&saved.apiToken){
-    try{
-      currentApiToken=saved.apiToken;studentSessionActive=true;
-      $('ld-msg').textContent='Memulihkan sesi ujian...';
-      const ps=await getDocs(query(C('packets'),where('token','==',saved.tok)));
-      if(ps.empty)throw new Error('Token ujian tidak ditemukan.');
-      const pkt={id:ps.docs[0].id,...ps.docs[0].data()};
-      const sd=await getDoc(D('students',saved.nisn));
-      if(!sd.exists())throw new Error('Data siswa tidak ditemukan.');
-      const st={nisn:saved.nisn,...sd.data()};
-      const tDoc=await getDoc(D('teachers',pkt.teacherId));
-      const t={username:pkt.teacherId,...tDoc.data()};
-      const id=`${saved.nisn}_${pkt.id}`;
-      const es=await getDoc(D('exams',id));
-      const ex=es.exists()?es.data():{};
-      if(ex.status==='submitted')throw new Error('Ujian ini sudah dikumpulkan.');
-      await startConfirmedExam({nisn:saved.nisn,tok:saved.tok,pkt,s:st,t,id,ex},true);return;
-    }catch(e){console.warn(e);currentApiToken=null;studentSessionActive=false;store.clear();toast('Sesi siswa berakhir. Silakan masukkan NISN dan token lagi.','warn')}
-  }
-  const {data,error}=await supabase.auth.getSession();
-  if(!error&&data.session){
-    currentApiToken=data.session.access_token;studentSessionActive=false;
-    try{
-      const me=await apiRequest({action:'whoami'});
-      role=me.role;
-      if(me.role==='admin'){openAdmin();return}
-      if(me.role==='teacher'){
-        const d=await getDoc(D('teachers',me.username));
-        if(!d.exists())throw new Error('Profil guru belum dibuat.');
-        T={username:me.username,...d.data()};openTeacher();return;
-      }
-    }catch(e){console.warn(e);await supabase.auth.signOut();currentApiToken=null;studentSessionActive=false}
-  }
-  store.clear();routeBasedOnUrl();
+    const s=store.get();
+    if(s){
+        try {
+            if(s.role==='admin'){const c=await getDoc(D('settings','config'));const ah=(c.exists()&&c.data().adminHash)||await sha('admin123');if(s.h===ah)return openAdmin();}
+            else if(s.role==='teacher'){const d=await getDoc(D('teachers',s.user));if(d.exists()&&d.data().passHash===s.h){T={username:s.user,...d.data()};return openTeacher()}}
+            else if(s.role==='student') {
+                $('ld-msg').textContent='Memulihkan sesi ujian...';
+                const ps=await getDocs(query(C('packets'),where('token','==',s.tok)));
+                if(ps.empty) { store.clear(); return routeBasedOnUrl(); }
+                const pkt={id:ps.docs[0].id,...ps.docs[0].data()};
+                const sd=await getDoc(D('students',s.nisn));
+                if(!sd.exists()) { store.clear(); return routeBasedOnUrl(); }
+                const st={nisn:s.nisn,...sd.data()};
+                const tDoc = await getDoc(D('teachers',pkt.teacherId));
+                const t={username:pkt.teacherId,...tDoc.data()};
+                const id=`${s.nisn}_${pkt.id}`;
+                const es=await getDoc(D('exams',id));
+                const ex=es.exists()?es.data():{};
+                await startConfirmedExam({nisn:s.nisn, tok:s.tok, pkt, s:st, t, id, ex}, true);
+                return;
+            }
+        } catch(e) {
+            console.warn(e);
+            if(typeof e==='string') toast(e,'err');
+            store.clear();
+        }
+    }
+    routeBasedOnUrl();
 }
 
 function routeBasedOnUrl() {
@@ -377,7 +390,7 @@ function routeBasedOnUrl() {
 const act={
 tab(id){const gr=id.split('-')[0];document.querySelectorAll('.p-'+gr).forEach(p=>p.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('.t-'+gr).forEach(b=>b.classList.toggle('on',b.dataset.id===id));if(id==='t-hasil')rR()},
 pick(id){$(id).click()},
-async logout(){store.clear();currentApiToken=null;studentSessionActive=false;try{await supabase.auth.signOut()}catch{}location.href=window.location.pathname+window.location.search;},
+logout(){store.clear();location.href = window.location.pathname + window.location.search;},
 
 cancelS(){$('f-addS').reset();$('as-n').readOnly=false;$('as-cancel').classList.add('hidden');$('as-sub').textContent='Simpan'},
 editS(id){const s=S.students.find(x=>x.nisn===id);if(!s)return;$('as-n').value=s.nisn;$('as-n').readOnly=true;$('as-m').value=s.name;$('as-k').value=s.class;$('as-cancel').classList.remove('hidden');$('as-sub').textContent='Simpan Perubahan';$('f-addS').scrollIntoView({behavior:'smooth'})},
@@ -385,7 +398,7 @@ delS(id){ask('Hapus siswa?',`NISN ${id} akan dihapus.`,()=>deleteDoc(D('students
 
 cancelT(){$('f-addT').reset();$('at-u').readOnly=false;$('at-p').required=true;$('at-p-hint').classList.add('hidden');$('at-k-list').querySelectorAll('input').forEach(i=>i.checked=false);$('at-cancel').classList.add('hidden');$('at-sub').textContent='Simpan'},
 editT(id){const t=S.teachers.find(x=>x.username===id);if(!t)return;$('at-u').value=t.username;$('at-u').readOnly=true;$('at-n').value=t.name;$('at-m').value=t.mapel;const kls=t.kelas.split(',').map(x=>x.trim());$('at-k-list').querySelectorAll('input').forEach(i=>i.checked=kls.includes(i.value));$('at-p').required=false;$('at-p').value='';$('at-p-hint').classList.remove('hidden');$('at-cancel').classList.remove('hidden');$('at-sub').textContent='Simpan Perubahan';$('f-addT').scrollIntoView({behavior:'smooth'})},
-delT(id){ask('Hapus guru?',`Akun ${id} akan dihapus.`,()=>apiRequest({action:'teacher_manage',op:'delete',username:id}).then(()=>toast('Guru dihapus')).catch(e=>toast(fmtErr(e),'err')))},
+delT(id){ask('Hapus guru?',`Akun ${id} akan dihapus.`,()=>deleteDoc(D('teachers',id)).then(()=>toast('Guru dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 
 delK(id){ask('Hapus kelas?',`Kelas ${id} akan dihapus dari daftar (Siswa & Guru tidak akan terhapus otomatis).`,()=>setDoc(D('settings','config'),{classes:S.classes.filter(x=>x!==id)},{merge:true}).then(()=>toast('Kelas dihapus')).catch(e=>toast(fmtErr(e),'err')))},
 
@@ -490,26 +503,17 @@ submit(){const n=Object.keys(U.ans).length,t=U.qs.length;ask('Kumpulkan ujian?',
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&act[b.dataset.a])act[b.dataset.a](b.dataset.id)});
 function dl(data,sheet,file){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),sheet);XLSX.writeFile(wb,file)}
 
-// ===== LOGIN STAFF VIA SUPABASE AUTH =====
-$('f-staff').addEventListener('submit',async e=>{
-  e.preventDefault();
-  if(Date.now()<lockUntil)return toast(`Terlalu banyak percobaan. Tunggu ${Math.ceil((lockUntil-Date.now())/1000)} detik.`,'err');
-  const btn=$('sl-btn');btn.disabled=true;
-  const u=$('sl-u').value.trim();const password=$('sl-p').value;
-  try{
-    if(role==='admin'&&u.toLowerCase()!=='admin')throw new Error('Username admin harus diisi dengan admin.');
-    const email=role==='admin'?'admin@smpn47.sch.id':`${u.toLowerCase()}@staff.smpn47.sch.id`;
-    const {data,error}=await supabase.auth.signInWithPassword({email,password});
-    if(error||!data.session)throw new Error('Username atau password salah.');
-    currentApiToken=data.session.access_token;studentSessionActive=false;
-    const me=await apiRequest({action:'whoami'});
-    if(me.role!==role)throw new Error('Akun tidak memiliki akses ke halaman ini.');
-    if(me.role==='admin')openAdmin();
-    else {const td=await getDoc(D('teachers',me.username));if(!td.exists())throw new Error('Profil guru tidak ditemukan.');T={username:me.username,...td.data()};openTeacher()}
-    fails=0;$('f-staff').reset();
-  }catch(x){await supabase.auth.signOut();currentApiToken=null;studentSessionActive=false;if(++fails>=5){lockUntil=Date.now()+60000;fails=0}toast(x.message||fmtErr(x),'err')}
-  finally{btn.disabled=false}
-});
+// ===== LOGIN STAFF =====
+$('f-staff').addEventListener('submit',async e=>{e.preventDefault();
+if(Date.now()<lockUntil)return toast(`Terlalu banyak percobaan. Tunggu ${Math.ceil((lockUntil-Date.now())/1000)} detik.`,'err');
+const btn=$('sl-btn');btn.disabled=true;const u=$('sl-u').value.trim(),h=await sha($('sl-p').value);let ok=false;
+try{if(role==='admin'){const c=await getDoc(D('settings','config'));const ah=c.exists()&&c.data().adminHash;
+if(u==='admin'&&h===(ah||await sha('admin123'))){ok=true;store.set({role:'admin',h});openAdmin();if(!ah)toast('Anda memakai password bawaan. Segera ganti di tab Keamanan!','warn')}}
+else{const d=await getDoc(D('teachers',u));if(d.exists()){const t=d.data();let good=t.passHash===h;
+if(!good&&t.password&&t.password===$('sl-p').value){good=true;await setDoc(D('teachers',u),{passHash:h,password:deleteField()},{merge:true})}
+if(good){ok=true;T={username:u,...t,passHash:h};store.set({role:'teacher',user:u,h});openTeacher()}}}
+if(!ok){if(++fails>=5){lockUntil=Date.now()+60000;fails=0}toast('Username atau password salah','err')}else{fails=0;$('f-staff').reset()}}
+catch(x){toast(fmtErr(x),'err')}btn.disabled=false});
 
 // ===== ADMIN =====
 function openAdmin(){stop();
@@ -541,34 +545,56 @@ if(newClasses.length){const c=[...new Set([...S.classes,...newClasses])].sort();
 toast(`${items.length} siswa diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
 
 $('f-addT').addEventListener('submit',async e=>{
-  e.preventDefault();const u=$('at-u').value.trim();
-  const kls=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value).join(',');
-  if(!kls)return toast('Pilih minimal 1 kelas untuk guru ini.','err');
-  try{
-    const isEdit=$('at-u').readOnly;
-    await apiRequest({action:'teacher_manage',op:isEdit?'update':'create',username:u,password:$('at-p').value||'',data:{name:$('at-n').value.trim(),mapel:$('at-m').value.trim(),kelas:kls}});
-    toast(isEdit?'Guru diperbarui':'Guru ditambahkan');act.cancelT();
-  }catch(x){toast(fmtErr(x),'err')}
+    e.preventDefault();
+    const u=$('at-u').value.trim();
+    const kls=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value).join(',');
+    if(!kls) return toast('Pilih minimal 1 kelas untuk guru ini.','err');
+    try {
+        const isEdit = $('at-u').readOnly;
+        if(!isEdit && (await getDoc(D('teachers',u))).exists()) return toast('Username sudah dipakai','err');
+        
+        const d = {name:$('at-n').value.trim(), mapel:$('at-m').value.trim(), kelas:kls};
+        if(!isEdit) d.createdAt = new Date().toISOString();
+        if($('at-p').value) d.passHash = await sha($('at-p').value);
+        
+        await setDoc(D('teachers',u), d, {merge:true});
+        toast(isEdit ? 'Guru diperbarui' : 'Guru ditambahkan');
+        act.cancelT();
+    } catch(x) { toast(fmtErr(x),'err'); }
 });
 
 $('up-t').addEventListener('change',async e=>{
-  const f=e.target.files[0];if(!f)return;
-  try{
-    busy('Membuat akun guru...');const rows=await readXlsx(f),newClasses=[];let count=0;
-    for(const r of rows){
-      const u=String(g(r,'username')||'').trim(),n=String(g(r,'nama','name')||'').trim(),m=String(g(r,'mapel','mata pelajaran')||'').trim(),k=String(g(r,'kelas','class')||'').trim(),p=String(g(r,'password')||'').trim();
-      if(u&&n&&m&&k&&p){await apiRequest({action:'teacher_manage',op:'create',username:u,password:p,data:{name:n,mapel:m,kelas:k}});count++;
-        k.split(',').forEach(cls=>{const c=cls.trim();if(c&&!S.classes.includes(c)&&!newClasses.includes(c))newClasses.push(c)})}
-    }
-    if(!count)return toast('Tidak ada baris valid. Kolom wajib: Username, Nama, Mapel, Kelas, Password.','err');
-    if(newClasses.length){const c=[...new Set([...S.classes,...newClasses])].sort();await setDoc(D('settings','config'),{classes:c},{merge:true})}
-    toast(`${count} akun guru berhasil dibuat${rows.length>count?`, ${rows.length-count} baris dilewati`:''}`);
-  }catch(x){toast(x.message||'Gagal membuat akun guru. Pastikan username belum digunakan dan password minimal 8 karakter.','err')}
-  finally{busy();e.target.value=''}
+    const f=e.target.files[0];if(!f)return;
+    try{
+        busy('Memproses file...');
+        const rows=await readXlsx(f), items=[], newClasses=[];
+        for(const r of rows) {
+            const u=String(g(r,'username')||'').trim(),
+                  n=String(g(r,'nama','name')||'').trim(),
+                  m=String(g(r,'mapel','mata pelajaran')||'').trim(),
+                  k=String(g(r,'kelas','class')||'').trim(),
+                  p=String(g(r,'password')||'').trim();
+            if(u&&n&&m&&k&&p) {
+                items.push([D('teachers',u),{name:n, mapel:m, kelas:k, passHash:await sha(p), createdAt:new Date().toISOString()}]);
+                k.split(',').forEach(cls => {
+                    const clTrim = cls.trim();
+                    if(clTrim && !S.classes.includes(clTrim) && !newClasses.includes(clTrim)) newClasses.push(clTrim);
+                });
+            }
+        }
+        if(!items.length) return toast('Tidak ada baris valid. Kolom wajib: Username, Nama, Mapel, Kelas, Password.','err');
+        await batchSet(items);
+        if(newClasses.length){
+            const c=[...new Set([...S.classes,...newClasses])].sort();
+            await setDoc(D('settings','config'),{classes:c},{merge:true});
+        }
+        toast(`${items.length} guru diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`);
+    } catch(x) { toast('Gagal membaca file / menyimpan', 'err'); }
+    finally { busy(); e.target.value=''; }
 });
 
 $('f-addK').addEventListener('submit',async e=>{e.preventDefault();const n=$('ak-n').value.trim();if(!n)return;try{const c=[...new Set([...S.classes,n])].sort();await setDoc(D('settings','config'),{classes:c},{merge:true});toast('Kelas ditambahkan');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
-$('f-pw').addEventListener('submit',async e=>{e.preventDefault();const a=$('pw-1').value;if(a!==$('pw-2').value)return toast('Password tidak sama','err');if(a.length<8)return toast('Password minimal 8 karakter.','err');try{const {error}=await supabase.auth.updateUser({password:a});if(error)throw error;toast('Password admin berhasil diganti');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
+$('f-pw').addEventListener('submit',async e=>{e.preventDefault();const a=$('pw-1').value;if(a!==$('pw-2').value)return toast('Password tidak sama','err');try{const h=await sha(a);await setDoc(D('settings','config'),{adminHash:h},{merge:true});store.set({role:'admin',h});toast('Password diganti');e.target.reset()}catch(x){toast(fmtErr(x),'err')}});
 
 // ===== GURU =====
 function openTeacher(){stop();const id=T.username;
@@ -757,12 +783,8 @@ $('f-student').addEventListener('submit', async e => {
     e.preventDefault();
     const b = $('s-btn'); b.disabled = true; b.textContent = 'Memeriksa...';
     try {
-        const nisn=$('s-nisn').value.trim(),tok=$('s-tok').value.trim().toUpperCase();
-        const auth=await apiRequest({action:'student_login',nisn,token:tok},SUPABASE_PUBLISHABLE_KEY);
-        currentApiToken=auth.accessToken;studentSessionActive=true;
-        await prepareExam(nisn,tok);
+        await prepareExam($('s-nisn').value.trim(), $('s-tok').value.trim().toUpperCase());
     } catch(x) {
-        currentApiToken=null;studentSessionActive=false;
         if(typeof x !== 'string') console.error(x);
         toast(fmtErr(x), 'err');
     }
@@ -832,7 +854,7 @@ async function startConfirmedExam(silentData, isSilentResume) {
 
     await setDoc(D('exams', id), {nisn, teacherId: t.username, paketId: pkt.id, paketName: pkt.name, studentName: s.name, class: s.class, mapel: t.mapel, startedAt, status: 'in_progress', answers: U.ans, flags: U.flags, violations: U.viol}, {merge: true});
     
-    store.set({role: 'student', nisn, tok, apiToken:currentApiToken});
+    store.set({role: 'student', nisn, tok});
     
     $('e-name').textContent = s.name;
     $('e-info').textContent = `NISN ${s.nisn} | Kelas ${s.class} | ${pkt.name}`;
@@ -879,7 +901,7 @@ async function finish(){
     U.on=false;
     clearInterval(U.timer);
     clearInterval(U.retry);
-    const total=U.qs.length;let correct=U.qs.filter(q=>U.ans[q.id]===q.answer).length;let score=Math.round(correct/total*100);
+    const total=U.qs.length,correct=U.qs.filter(q=>U.ans[q.id]===q.answer).length,score=Math.round(correct/total*100);
     let ok=false;
     for(let i=0;i<3&&!ok;i++){
         U.on=true;
@@ -892,9 +914,7 @@ async function finish(){
         U.timer=setInterval(tick,1000);
         return toast('Gagal mengirim jawaban. Periksa koneksi lalu tekan Kumpulkan lagi.','err');
     }
-    try{const finalExam=await getDoc(D('exams',U.id));if(finalExam.exists()){const finalData=finalExam.data();score=finalData.score??score;correct=finalData.correct??correct;}}
-    catch(e){console.warn('Tidak dapat membaca hasil final dari server',e)}
-    store.clear();currentApiToken=null;studentSessionActive=false;
+    store.clear();
     try{if(document.fullscreenElement)await document.exitFullscreen()}catch{}
     if(U.pkt.showScore!==false){
         const kkm=U.pkt.kkm??70;
