@@ -157,8 +157,16 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
             <div><label class="lbl">KKM (nilai lulus)</label><input id="c-kkm" type="number" min="0" max="100" class="inp bg-white"></div>
             <div><label class="lbl">Batas pelanggaran <span class="text-gray-400 font-normal">(0=Bebas)</span></label><input id="c-viol" type="number" min="0" class="inp bg-white"></div>
         </div>
+        <div class="mt-4 bg-white border rounded-lg p-3">
+            <div class="flex items-center justify-between mb-2"><b class="text-sm text-blue-800"><i class="fas fa-calendar-alt mr-1"></i>Jadwal Buka &amp; Tutup Otomatis <span class="text-gray-400 font-normal">(opsional)</span></b><button type="button" data-a="clrSched" class="text-xs text-red-600 underline">Hapus jadwal</button></div>
+            <div class="grid sm:grid-cols-2 gap-3">
+                <div><label class="lbl">Buka pada</label><input id="c-open" type="datetime-local" class="inp"></div>
+                <div><label class="lbl">Tutup pada</label><input id="c-close" type="datetime-local" class="inp"></div>
+            </div>
+            <p id="c-sched-hint" class="text-xs text-gray-500 mt-2"></p>
+        </div>
         <div class="flex flex-wrap items-center gap-5 mt-4 text-sm">
-            <label class="flex items-center gap-1.5 font-bold text-green-800"><input type="checkbox" id="c-act" class="w-4 h-4 text-green-600"> Ujian dibuka (Siswa bisa login)</label>
+            <label class="flex items-center gap-1.5 font-bold text-green-800"><input type="checkbox" id="c-act" class="w-4 h-4 text-green-600"> Ujian dibuka manual <span class="font-normal text-gray-500">(diabaikan bila jadwal diisi)</span></label>
             <label class="flex items-center gap-1.5"><input type="checkbox" id="c-shuf" class="w-4 h-4 text-green-600"> Acak soal & opsi</label>
             <label class="flex items-center gap-1.5"><input type="checkbox" id="c-show" class="w-4 h-4 text-green-600"> Tampilkan nilai ke siswa</label>
             <button data-a="saveCfg" class="btn ml-auto bg-green-600 hover:bg-green-700 shadow-sm"><i class="fas fa-save mr-1"></i>Simpan Pengaturan</button>
@@ -245,7 +253,7 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 
 <!-- RESULT -->
 <main id="v-result" class="view"><div class="min-h-screen flex items-center justify-center p-4"><div class="card max-w-md w-full text-center py-8">
-<i class="fas fa-circle-check text-6xl text-green-500 mb-4"></i><h2 class="text-2xl font-bold mb-2">Ujian Selesai</h2><p class="text-gray-600">Jawaban Anda telah tersimpan.</p>
+<i class="fas fa-circle-check text-6xl text-green-500 mb-4"></i><h2 id="r-title" class="text-2xl font-bold mb-2">Ujian Selesai</h2><p id="r-msg" class="text-gray-600">Jawaban Anda telah tersimpan.</p>
 <div id="r-score" class="hidden bg-gray-50 border rounded-lg p-4 mt-5"><p class="text-sm text-gray-500">Nilai Anda</p><p id="r-val" class="text-4xl font-bold text-blue-600"></p><p id="r-note" class="text-sm mt-1"></p></div>
 <button onclick="location.reload()" class="mt-6 text-blue-600 underline">Kembali ke beranda</button></div></div></main>
 
@@ -342,6 +350,15 @@ let S={students:[],teachers:[],questions:[],exams:[],classes:[],packets:[]},T=nu
 let currentPaket = null;
 let prepData = null; 
 const stop=()=>{subs.forEach(f=>f());subs=[]};
+// ===== JADWAL & WAKTU =====
+const fmtDT=ms=>new Date(ms).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+const toLocalInput=ms=>{if(!ms)return'';const d=new Date(ms);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
+const fromLocalInput=v=>v?new Date(v).getTime():null;
+const hasSched=p=>!!(p.openAt||p.closeAt);
+const pktState=(p,now=Date.now())=>hasSched(p)?(p.openAt&&now<p.openAt?'scheduled':(p.closeAt&&now>=p.closeAt?'ended':'open')):(p.active?'open':'closed');
+const endOf=(p,start)=>{const e=start+(p.duration||60)*60000;return p.closeAt?Math.min(e,p.closeAt):e};
+const schedHint=p=>{const s=pktState(p),m={open:'Status saat ini: DIBUKA.',closed:'Status saat ini: DITUTUP (manual).',scheduled:'Status saat ini: menunggu jadwal buka.',ended:'Status saat ini: DITUTUP (jadwal berakhir).'}[s];return hasSched(p)?m+' Jadwal mengatur akses otomatis; siswa yang masih mengerjakan akan dikumpulkan otomatis saat waktu tutup tiba.':m};
+setInterval(()=>{if(T&&$('p-paket-list')&&!$('p-paket-list').classList.contains('hidden'))rPaket()},30000);
 
 // ===== INIT & ROUTING =====
 (async()=>{const slow=setTimeout(()=>{$('ld-msg').innerHTML='Memuat terlalu lama. Periksa koneksi internet. <button onclick="location.reload()" class="underline font-semibold ml-1">Muat ulang</button>'},15000);
@@ -367,6 +384,8 @@ async function resume(){
                 const id=`${s.nisn}_${pkt.id}`;
                 const es=await getDoc(D('exams',id));
                 const ex=es.exists()?es.data():{};
+                if(ex.status==='submitted'){showPastResult(pkt,ex);return}
+                if(ex.status==='in_progress'&&Date.now()>=endOf(pkt,ex.startedAt)){await autoCloseAndShow(pkt,ex,id);return}
                 await startConfirmedExam({nisn:s.nisn, tok:s.tok, pkt, s:st, t, id, ex}, true);
                 return;
             }
@@ -422,6 +441,9 @@ openPaket(id){
     $('c-kkm').value = currentPaket.kkm ?? 70;
     $('c-viol').value = currentPaket.maxViol ?? 0;
     $('c-act').checked = !!currentPaket.active;
+    $('c-open').value = toLocalInput(currentPaket.openAt);
+    $('c-close').value = toLocalInput(currentPaket.closeAt);
+    $('c-sched-hint').textContent = schedHint(currentPaket);
     $('c-shuf').checked = currentPaket.shuffle !== false;
     $('c-show').checked = currentPaket.showScore !== false;
     
@@ -460,6 +482,7 @@ delAllQ(){
 },
 reset(id){ask('Reset ujian siswa?','Jawaban & nilai siswa ini dihapus sehingga bisa mengerjakan ulang.',()=>deleteDoc(D('exams',id)).then(()=>toast('Ujian direset')).catch(e=>toast(fmtErr(e),'err')))},
 genTok(){$('c-tok').value=Math.random().toString(36).slice(2,8).toUpperCase()},
+clrSched(){$('c-open').value='';$('c-close').value='';toast('Jadwal dikosongkan. Klik Simpan Pengaturan untuk menerapkan.','warn')},
 
 async saveCfg(){
     if(!currentPaket) return;
@@ -469,9 +492,12 @@ async saveCfg(){
         const dup=await getDocs(query(C('packets'),where('token','==',tok)));
         if(dup.docs.some(d=>d.id!==currentPaket.id)) return toast('Token sudah dipakai pada paket lain','err');
         
-        const d={token:tok,duration:dur,kkm,maxViol:mv,active:$('c-act').checked,shuffle:$('c-shuf').checked,showScore:$('c-show').checked};
+        const oa=fromLocalInput($('c-open').value),ca=fromLocalInput($('c-close').value);
+        if(oa&&ca&&ca<=oa) return toast('Waktu tutup harus setelah waktu buka','err');
+        const d={token:tok,duration:dur,kkm,maxViol:mv,active:$('c-act').checked,shuffle:$('c-shuf').checked,showScore:$('c-show').checked,openAt:oa,closeAt:ca};
         await setDoc(D('packets',currentPaket.id), d, {merge:true});
         Object.assign(currentPaket, d);
+        $('c-sched-hint').textContent = schedHint(currentPaket);
         toast('Pengaturan tersimpan');
     } catch(e) { toast(fmtErr(e),'err'); }
 },
@@ -598,7 +624,7 @@ $('f-pw').addEventListener('submit',async e=>{e.preventDefault();const a=$('pw-1
 
 // ===== GURU =====
 function openTeacher(){stop();const id=T.username;
-$('t-sub').textContent=`${T.mapel} | Kelas ${T.kelas}`;
+$('t-sub').textContent=`${T.name||T.username} | ${T.mapel} | Kelas ${T.kelas}`;
 subs.push(onSnapshot(query(C('packets'),where('teacherId','==',id)),s=>{S.packets=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));rPaket()},e=>toast(fmtErr(e),'err')));
 subs.push(onSnapshot(query(C('questions'),where('teacherId','==',id)),s=>{S.questions=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||''));rPaket();rQ()},e=>toast(fmtErr(e),'err')));
 subs.push(onSnapshot(query(C('exams'),where('teacherId','==',id)),s=>{S.exams=s.docs.map(d=>({id:d.id,...d.data()}));rR()},e=>toast(fmtErr(e),'err')));
@@ -627,7 +653,12 @@ function rPaket() {
     if (!T) return;
     $('paket-list').innerHTML = S.packets.map(p => {
         const qCount = S.questions.filter(q => q.paketId === p.id).length;
-        const status = p.active ? '<span class="text-green-600 font-bold"><i class="fas fa-unlock text-xs"></i> Aktif</span>' : '<span class="text-gray-400 font-bold"><i class="fas fa-lock text-xs"></i> Ditutup</span>';
+        const status = {
+            open:'<span class="text-green-600 font-bold"><i class="fas fa-unlock text-xs"></i> Aktif</span>',
+            closed:'<span class="text-gray-400 font-bold"><i class="fas fa-lock text-xs"></i> Ditutup</span>',
+            scheduled:`<span class="text-blue-600 font-bold"><i class="fas fa-clock text-xs"></i> Buka ${fmtDT(p.openAt)}</span>`,
+            ended:'<span class="text-gray-400 font-bold"><i class="fas fa-lock text-xs"></i> Selesai</span>'
+        }[pktState(p)];
         return `<div class="card relative hover:border-blue-400 transition-colors shadow-sm">
             <h4 class="font-bold text-lg text-blue-800 pr-10">${esc(p.name)}</h4>
             <p class="text-xs text-gray-500 mt-1 mb-2"><i class="fas fa-users mr-1"></i> Kelas ${esc(p.classes.join(', '))}</p>
@@ -745,7 +776,7 @@ function rR(){
     // AUTO-SUBMIT CERDAS VIA DASHBOARD GURU
     r.forEach(({s, e}) => {
         if(e && e.status === 'in_progress') {
-            const end = e.startedAt + ((pkt.duration||60) * 60000);
+            const end = endOf(pkt, e.startedAt);
             if(now > end + 3000 && !e._locking) {
                 e._locking = true; // Kunci agar tidak berulang
                 const ans = e.answers || {};
@@ -764,7 +795,7 @@ function rR(){
     $('tb-r').innerHTML=r.map(({s,e})=> {
         let sisaWaktu = '-', sisaSoal = '-', timerAttr = '';
         if (e && e.status === 'in_progress') {
-            const end = e.startedAt + ((pkt.duration||60) * 60000);
+            const end = endOf(pkt, e.startedAt);
             timerAttr = `class="rt-timer font-mono font-semibold text-blue-600" data-end="${end}"`;
             sisaWaktu = '...';
             const ansCount = e.answers ? Object.keys(e.answers).length : 0;
@@ -791,11 +822,34 @@ $('f-student').addEventListener('submit', async e => {
     b.disabled = false; b.textContent = 'Lanjutkan';
 });
 
+function showResultView(pkt,score,correct,total,msg){
+    $('r-msg').textContent=msg||'Jawaban Anda telah tersimpan.';
+    const box=$('r-score');
+    if(pkt.showScore!==false&&score!=null){
+        const kkm=pkt.kkm??70;
+        box.classList.remove('hidden');
+        $('r-val').textContent=score;
+        $('r-note').innerHTML=`${correct} dari ${total} benar &middot; <b class="${score>=kkm?'text-green-600':'text-red-600'}">${score>=kkm?'Lulus':'Belum lulus'}</b>`;
+    } else box.classList.add('hidden');
+    view('v-result');
+}
+function showPastResult(pkt,ex){
+    store.clear();
+    showResultView(pkt,ex.score,ex.correct,ex.total,ex.auto_closed_by_system?'Waktu ujian Anda telah habis dan jawaban sudah dikumpulkan otomatis.':'Anda sudah mengumpulkan ujian ini.');
+}
+async function autoCloseAndShow(pkt,ex,id){
+    const qs=await getDocs(query(C('questions'),where('paketId','==',pkt.id)));
+    const list=qs.docs.map(d=>({id:d.id,...d.data()}));
+    const ans=ex.answers||{},total=list.length,correct=list.filter(q=>ans[q.id]===q.answer).length,score=total?Math.round(correct/total*100):0;
+    await setDoc(D('exams',id),{status:'submitted',score,correct,total,submittedAt:new Date().toISOString(),auto_closed_by_system:true},{merge:true});
+    store.clear();
+    showResultView(pkt,score,correct,total,'Waktu ujian Anda telah habis dan jawaban terakhir sudah dikumpulkan otomatis.');
+}
+
 async function prepareExam(nisn, tok) {
     const ps = await getDocs(query(C('packets'), where('token', '==', tok)));
     if(ps.empty) throw 'Token ujian tidak valid.';
     const pkt = {id: ps.docs[0].id, ...ps.docs[0].data()};
-    if(!pkt.active) throw 'Ujian belum dibuka oleh guru.';
 
     const sd = await getDoc(D('students', nisn));
     if(!sd.exists()) throw 'NISN tidak terdaftar. Hubungi admin.';
@@ -808,7 +862,14 @@ async function prepareExam(nisn, tok) {
     const id = `${nisn}_${pkt.id}`;
     const es = await getDoc(D('exams', id));
     const ex = es.exists() ? es.data() : {};
-    if(ex.status === 'submitted') throw 'Anda sudah mengumpulkan ujian ini.';
+    // Sudah selesai / waktu habis -> tampilkan nilai (meski ujian sudah ditutup)
+    if(ex.status === 'submitted') return showPastResult(pkt, ex);
+    if(ex.status === 'in_progress' && Date.now() >= endOf(pkt, ex.startedAt)) return await autoCloseAndShow(pkt, ex, id);
+
+    const stt = pktState(pkt);
+    if(stt === 'scheduled') throw `Ujian belum dibuka. Jadwal buka: ${fmtDT(pkt.openAt)}.`;
+    if(stt === 'ended') throw `Ujian sudah ditutup pada ${fmtDT(pkt.closeAt)}.`;
+    if(stt === 'closed') throw 'Ujian belum dibuka oleh guru.';
 
     prepData = {nisn, tok, pkt, s, t, id, ex};
 
@@ -850,7 +911,7 @@ async function startConfirmedExam(silentData, isSilentResume) {
     const startedAt = ex.startedAt || Date.now();
     const mv = pkt.maxViol !== undefined ? pkt.maxViol : 0;
 
-    U = {on: true, id, pkt, t, s, qs: list, i: 0, ans: ex.answers || {}, flags: ex.flags || {}, viol: ex.violations || 0, end: startedAt + (pkt.duration || 60) * 60000, maxV: mv, dirty: false, hid: false};
+    U = {on: true, id, pkt, t, s, qs: list, i: 0, ans: ex.answers || {}, flags: ex.flags || {}, viol: ex.violations || 0, end: endOf(pkt, startedAt), maxV: mv, dirty: false, hid: false};
 
     await setDoc(D('exams', id), {nisn, teacherId: t.username, paketId: pkt.id, paketName: pkt.name, studentName: s.name, class: s.class, mapel: t.mapel, startedAt, status: 'in_progress', answers: U.ans, flags: U.flags, violations: U.viol}, {merge: true});
     
@@ -916,13 +977,7 @@ async function finish(){
     }
     store.clear();
     try{if(document.fullscreenElement)await document.exitFullscreen()}catch{}
-    if(U.pkt.showScore!==false){
-        const kkm=U.pkt.kkm??70;
-        $('r-score').classList.remove('hidden');
-        $('r-val').textContent=score;
-        $('r-note').innerHTML=`${correct} dari ${total} benar &middot; <b class="${score>=kkm?'text-green-600':'text-red-600'}">${score>=kkm?'Lulus':'Belum lulus'}</b>`;
-    }
-    view('v-result');
+    showResultView(U.pkt,score,correct,total);
 }
 
 // ===== PENGAWASAN TAMPILAN MATI =====
