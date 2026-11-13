@@ -3,7 +3,6 @@
 <title>Portal Ujian Online</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js';document.head.appendChild(s)"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style type="text/tailwindcss">
 body{font-family:system-ui,-apple-system,sans-serif;background:#f3f4f6;color:#1f2937}
@@ -203,19 +202,6 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
             </form>
             
             <div class="card space-y-2"><h3 class="font-bold">Upload Massal via Excel</h3><p class="text-xs text-gray-500">Soal akan langsung dimasukkan ke paket ini.</p><input type="file" id="up-q" accept=".xlsx,.xls,.csv" class="hidden"><button data-a="pick" data-id="up-q" class="btn w-full"><i class="fas fa-file-excel mr-1"></i>Pilih File Excel</button><button data-a="dlQTpl" class="btn2 w-full">Unduh Template Excel</button></div>
-            <div class="card space-y-2"><h3 class="font-bold">Import Soal dari Word</h3><p class="text-xs text-gray-500">Unggah file <b>.docx</b>. Soal akan dimasukkan ke paket ini setelah Anda konfirmasi.</p><input type="file" id="up-qw" accept=".docx" class="hidden"><button data-a="pick" data-id="up-qw" class="btn w-full bg-blue-600 hover:bg-blue-700"><i class="fas fa-file-word mr-1"></i>Pilih File Word</button>
-            <details class="text-xs text-gray-600"><summary class="cursor-pointer font-semibold text-blue-700">Lihat format yang dibaca</summary>
-<pre class="bg-gray-50 border rounded p-2 mt-1 whitespace-pre-wrap leading-relaxed">1. Ibu kota Indonesia adalah ...
-A. Bandung
-B. Jakarta
-C. Surabaya
-D. Medan
-Jawaban: B
-
-2. Soal berikutnya ...
-A. ...
-(dst.)</pre>
-<ul class="list-disc ml-4 mt-1 space-y-0.5"><li>Setiap soal diakhiri baris <b>Jawaban: A/B/C/D</b> (boleh juga <i>Kunci: B</i>).</li><li>Opsi harus 4 (A-D). Nomor &amp; huruf otomatis (list) Word juga terbaca, asalkan tanpa judul/petunjuk di awal file.</li><li>Gambar di soal/opsi ikut diimpor (1 gambar per soal/opsi).</li><li>Jika soal diberi nomor manual (1., 2., ...), teks sebelum soal nomor 1 diabaikan.</li><li>Tabel dengan kolom <i>Pertanyaan, A, B, C, D, Jawaban</i> juga didukung.</li><li>Rumus (equation) Word tidak terbaca, gunakan gambar.</li></ul></details></div>
         </div>
         
         <div class="card lg:col-span-2"><div class="flex flex-wrap justify-between items-center gap-2 mb-3"><h3 class="font-bold">Isi Paket Soal <span id="cnt-q" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">0</span></h3><div class="flex items-center gap-2"><button data-a="delAllQ" class="text-sm text-red-600 whitespace-nowrap"><i class="fas fa-trash-alt mr-1"></i>Kosongkan Paket</button></div></div><div id="q-list" class="space-y-3 max-h-[70vh] overflow-y-auto"></div></div>
@@ -728,118 +714,6 @@ try{busy('Memproses file...');const rows=await readXlsx(f),items=[],m={a:0,b:1,c
 rows.forEach(r=>{const t=g(r,'pertanyaan'),o=['opsi a','opsi b','opsi c','opsi d'].map(k=>g(r,k)),a=m[norm(g(r,'jawaban (a/b/c/d)','jawaban'))],iu=String(g(r,'gambar (url, opsional)','gambar (url)','gambar')||'').trim();
 if(t&&o.every(x=>x!==undefined&&x!=='')&&a!==undefined)items.push([doc(C('questions')),{text:String(t),options:o.map(String),answer:a,image:/^https?:\/\//i.test(iu)?iu:null,paketId:currentPaket.id,teacherId:T.username,createdAt:new Date().toISOString()}])});
 if(!items.length)return toast('Tidak ada baris valid (jawaban harus A/B/C/D).','err');await batchSet(items);toast(`${items.length} soal diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
-
-
-// ==== WORD IMPORT START ====
-const ANS_RE=/^(?:jawaban(?:\s+benar)?|kunci(?:\s+jawaban)?|answer|key)\s*[:=]\s*\(?([A-Da-d])\)?(?![A-Za-z0-9])/i;
-const OPT_RE=/^\(?([A-Da-d])[\.\)]\s*(.*)$/;
-const NUM_RE=/^(?:soal\s*)?\(?\d+[\.\):]\s+/i;
-function buildWordBlock(b,ans,first){
-  const L=[];let carry=[];
-  for(const it of b){
-    if(!it.t){if(L.length)L[L.length-1].imgs.push(...it.imgs);else carry.push(...it.imgs);continue}
-    L.push({t:it.t,imgs:[...carry,...it.imgs]});carry=[];
-  }
-  if(!L.length)return{ok:false,why:'tidak ada teks soal'};
-  if(first){const k=L.findIndex(x=>NUM_RE.test(x.t));if(k>0)L.splice(0,k)}
-  L[0].t=L[0].t.replace(NUM_RE,'');
-  const opts=[null,null,null,null],qLines=[L[0]];let cur=-1;
-  for(let i=1;i<L.length;i++){
-    const m=OPT_RE.exec(L[i].t),li=m?'ABCD'.indexOf(m[1].toUpperCase()):-1;
-    if(m&&li===cur+1){cur=li;opts[cur]={t:m[2],imgs:[...L[i].imgs]}}
-    else if(cur>=0){opts[cur].t=(opts[cur].t+'\n'+L[i].t).trim();opts[cur].imgs.push(...L[i].imgs)}
-    else qLines.push(L[i]);
-  }
-  if(cur!==3){
-    if(cur===-1&&L.length>=5){ // nomor/huruf otomatis Word: 4 baris terakhir = opsi
-      const o=L.slice(-4);o.forEach((x,i)=>opts[i]={t:x.t,imgs:x.imgs});qLines.length=0;qLines.push(...L.slice(0,-4));
-    } else return{ok:false,why:'opsi harus lengkap A-D'};
-  }
-  const text=qLines.map(x=>x.t).filter(Boolean).join('\n').trim();
-  const qImg=qLines.flatMap(x=>x.imgs)[0]||null;
-  if(!text&&!qImg)return{ok:false,why:'teks soal kosong'};
-  if(opts.some(o=>!o.t&&!o.imgs.length))return{ok:false,why:'ada opsi kosong'};
-  return{ok:true,q:{text:text||'(lihat gambar)',options:opts.map(o=>o.t||'(lihat gambar)'),optImages:opts.map(o=>o.imgs[0]||null),image:qImg,answer:ans}};
-}
-function parseWordQuestions(items){
-  const out=[],bad=[];let blk=[],n=0;
-  for(const it of items){
-    const m=ANS_RE.exec(it.t);
-    if(m){n++;const r=buildWordBlock(blk,'ABCD'.indexOf(m[1].toUpperCase()),n===1);r.ok?out.push(r.q):bad.push(`soal ke-${n}: ${r.why}`);blk=[];continue}
-    if(!it.t&&!it.imgs.length)continue;
-    blk.push(it);
-  }
-  if(blk.some(x=>x.t)&&n>0)bad.push(`teks setelah soal ke-${n} tanpa baris "Jawaban:"`);
-  else if(blk.some(x=>x.t)&&n===0)bad.push('tidak ditemukan baris "Jawaban: A/B/C/D"');
-  return{out,bad};
-}
-function wordItems(html){
-  const doc=new DOMParser().parseFromString(html,'text/html'),imgs=[],items=[];
-  const blockLines=el=>{
-    const c=el.cloneNode(true);
-    c.querySelectorAll('img').forEach(im=>{const k=imgs.push(im.getAttribute('src'))-1;im.replaceWith(doc.createTextNode(`\uE000${k}\uE001`))});
-    c.querySelectorAll('br').forEach(b=>b.replaceWith(doc.createTextNode('\n')));
-    c.querySelectorAll('p,li').forEach(x=>x.append('\n'));
-    return c.textContent.split('\n').map(s=>({t:s.replace(/\uE000\d+\uE001/g,'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim(),imgs:[...s.matchAll(/\uE000(\d+)\uE001/g)].map(m=>imgs[+m[1]])}));
-  };
-  const cell=c=>{const l=blockLines(c);return{t:l.map(x=>x.t).filter(Boolean).join('\n'),imgs:l.flatMap(x=>x.imgs)}};
-  const table=tb=>{
-    const rows=[...tb.rows];if(!rows.length)return;
-    const hd=[...rows[0].cells].map(c=>norm(c.textContent)),map={q:-1,o:[-1,-1,-1,-1],a:-1};
-    hd.forEach((h,i)=>{if(/^(pertanyaan|soal)$/.test(h))map.q=i;else if(/^(opsi\s*)?([a-d])$/.test(h))map.o['abcd'.indexOf(h.slice(-1))]=i;else if(/jawaban|kunci/.test(h))map.a=i});
-    if(map.q<0||map.a<0||map.o.some(i=>i<0)){rows.forEach(r=>[...r.cells].forEach(c=>walk(c)));return}
-    rows.slice(1).forEach(r=>{
-      const cs=[...r.cells],q=cell(cs[map.q]);if(!q.t&&!q.imgs.length)return;
-      const a=(norm(cs[map.a]?.textContent).match(/[a-d]/)||[''])[0];
-      items.push(q);
-      map.o.forEach((ci,j)=>{const o=cell(cs[ci]);items.push({t:'ABCD'[j]+'. '+o.t.replace(/^\(?[A-Da-d][\.\)]\s+/,''),imgs:o.imgs})});
-      items.push({t:'Jawaban: '+(a||'?'),imgs:[]});
-    });
-  };
-  const walk=n=>{for(const el of n.children){
-    const tag=el.tagName;
-    if(tag==='TABLE')table(el);
-    else if(tag==='LI'){const own=el.cloneNode(true);own.querySelectorAll('ul,ol').forEach(x=>x.remove());items.push(...blockLines(own));walk(el)}
-    else if(/^(P|H[1-6])$/.test(tag))items.push(...blockLines(el));
-    else if(el.children.length)walk(el);
-  }};
-  walk(doc.body);
-  return items;
-}
-// ==== WORD IMPORT END ====
-
-$('up-qw').addEventListener('change',async e=>{
-  const f=e.target.files[0];if(!f)return;
-  const reset=()=>{e.target.value=''};
-  if(!currentPaket){reset();return toast('Buka salah satu paket soal terlebih dahulu','err')}
-  if(!/\.docx$/i.test(f.name)){reset();return toast('Gunakan file .docx (di Word: Simpan Sebagai > .docx)','err')}
-  if(typeof mammoth==='undefined'){reset();return toast('Pustaka pembaca Word gagal dimuat. Periksa koneksi lalu muat ulang halaman.','err')}
-  const pk=currentPaket,tid=T.username;
-  try{
-    busy('Membaca dokumen Word...');
-    const r=await mammoth.convertToHtml({arrayBuffer:await f.arrayBuffer()});
-    const {out,bad}=parseWordQuestions(wordItems(r.value));
-    busy();reset();
-    if(!out.length)return toast('Tidak ada soal yang terbaca. Pastikan tiap soal punya opsi A-D dan baris "Jawaban: X".','err');
-    if(bad.length)console.warn('Import Word dilewati:',bad);
-    const extra=bad.length?` ${bad.length} bagian dilewati (${bad.slice(0,3).join('; ')}${bad.length>3?'; ...':''}).`:'';
-    ask('Import soal dari Word',`${out.length} soal terbaca dari "${f.name}" dan akan ditambahkan ke paket ini.${extra} Lanjutkan?`,async()=>{
-      try{
-        busy('Menyimpan soal...');
-        let imgFail=0;
-        const shr=async u=>{if(!u)return null;try{return await shrink(await (await fetch(u)).blob())}catch{imgFail++;return null}};
-        const base=Date.now(),items=[];
-        for(let i=0;i<out.length;i++){
-          const q=out[i];
-          items.push([doc(C('questions')),{text:q.text,options:q.options,optImages:[await shr(q.optImages[0]),await shr(q.optImages[1]),await shr(q.optImages[2]),await shr(q.optImages[3])],answer:q.answer,image:await shr(q.image),paketId:pk.id,teacherId:tid,createdAt:new Date(base+i).toISOString()}]);
-        }
-        await batchSet(items);
-        toast(`${items.length} soal diimpor dari Word${imgFail?`, ${imgFail} gambar gagal diproses`:''}`,imgFail?'warn':'ok');
-      }catch(x){console.error(x);toast(fmtErr(x),'err')}
-      busy();
-    });
-  }catch(x){console.error(x);busy();reset();toast('Gagal membaca file Word','err')}
-});
 
 let qImg=null;
 const shrink=(f,max=900,lim=400000)=>new Promise((ok,no)=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{let k=Math.min(1,max/Math.max(im.width,im.height)),q=.8,d;const c=document.createElement('canvas'),x=c.getContext('2d');URL.revokeObjectURL(u);for(let n=0;n<6;n++){c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);d=c.toDataURL('image/jpeg',q);if(d.length<=lim)return ok(d);q=Math.max(.4,q-.1);k*=.8}no()};im.onerror=no;im.src=u});
