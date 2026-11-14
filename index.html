@@ -3,6 +3,7 @@
 <title>Portal Ujian Online</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';document.head.appendChild(s)"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style type="text/tailwindcss">
 body{font-family:system-ui,-apple-system,sans-serif;background:#f3f4f6;color:#1f2937}
@@ -10,13 +11,33 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f3f4f6;color:#1f
 .inp{@apply w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none read-only:bg-gray-200 read-only:cursor-not-allowed}
 .btn{@apply px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors}
 .btn2{@apply px-3 py-2 rounded-lg text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100}
-.card{@apply bg-white rounded-xl shadow-sm border border-gray-200 p-5}
+.card{@apply bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5}
 .lbl{@apply block text-xs font-semibold text-gray-600 mb-1}
 .tb{@apply py-3 font-medium text-gray-500 border-b-2 border-transparent}
 .tb.on{@apply font-bold text-blue-600 border-blue-600}
 th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@apply px-3 py-2}
 .exam{user-select:none}
+.tb{flex-shrink:0;white-space:nowrap}
+@media(max-width:639px){th,td{padding-left:.5rem;padding-right:.5rem}}
+/* Kartu ujian */
+.kc{border:1.5px solid #1f2937;border-radius:8px;background:#fff;padding:8px 10px;font-size:11px;color:#111;break-inside:avoid;page-break-inside:avoid;display:flex;flex-direction:column;gap:6px}
+.kc-h{text-align:center;border-bottom:1.5px solid #1f2937;padding-bottom:4px;line-height:1.25}
+.kc-h b{display:block;font-size:12px;text-transform:uppercase}
+.kc-h span{display:block;font-weight:800;font-size:13px;letter-spacing:.04em}
+.kc-h small{display:block;font-size:10px;color:#444}
+.kc-b{display:flex;gap:8px;align-items:flex-start}
+.kc-ph{flex:0 0 auto;width:64px;height:84px;border:1px dashed #6b7280;display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:#6b7280;overflow:hidden}
+.kc-ph.has{border:1px solid #6b7280}
+.kc-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.kc-sig{height:34px;display:flex;align-items:center;justify-content:center}
+.kc-sig img{max-height:34px;max-width:100px}
+.kc-b table{border-collapse:collapse;width:100%}
+.kc-b td{padding:1px 2px;vertical-align:top;border:0!important;font-size:11px}
+.kc-b td:first-child{width:74px;color:#444}
+.kc-f{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;font-size:9px;color:#444}
+.kc-sg{text-align:center;min-width:110px;font-size:10px;color:#111}
 @keyframes ld{0%{margin-left:-50%}100%{margin-left:100%}}
+@page{margin:10mm}
 @media print {
     body { background: white; color: black; }
     body * { visibility: hidden; }
@@ -28,6 +49,13 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
     th { background-color: #f3f4f6; }
+}
+@media print{
+ body.pc #loader,body.pc #toasts,body.pc #modal,body.pc #busy,body.pc #m-paket{display:none!important}
+ body.pc *{visibility:visible}
+ body.pc #v-admin>header,body.pc #v-admin>nav,body.pc #a-kartu>.no-print,body.pc .p-a:not(#a-kartu){display:none!important}
+ body.pc #v-admin>div{max-width:none;padding:0}
+ body.pc #kc-preview{display:grid!important;grid-template-columns:1fr 1fr;gap:5mm}
 }
 </style></head>
 <body>
@@ -53,8 +81,8 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <!-- LOGIN SISWA -->
 <main id="v-student" class="view"><div class="min-h-screen flex items-center justify-center p-4"><div class="card w-full max-w-md">
 <div class="text-center mb-6"><div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-user-graduate text-3xl text-blue-600"></i></div><h2 class="text-2xl font-bold">Portal Ujian Siswa</h2></div>
-<p class="text-sm text-gray-500 mb-5 text-center">Masukkan NISN dan token ujian dari guru. Sistem akan memantau aktivitas layar Anda.</p>
-<form id="f-student" class="space-y-4"><div><label class="lbl">NISN</label><input id="s-nisn" class="inp text-center text-lg tracking-wider font-semibold" required inputmode="numeric" autocomplete="off" placeholder="Masukkan NISN"></div>
+<p class="text-sm text-gray-500 mb-5 text-center">Masukkan NISN atau Nomor Peserta dan token ujian dari guru. Sistem akan memantau aktivitas layar Anda.</p>
+<form id="f-student" class="space-y-4"><div><label class="lbl">NISN / Nomor Peserta</label><input id="s-nisn" class="inp text-center text-lg tracking-wider font-semibold" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="NISN atau No. Peserta"></div>
 <div><label class="lbl">Token Ujian</label><input id="s-tok" class="inp text-center uppercase text-lg tracking-wider font-semibold" required autocomplete="off" placeholder="XXXXXX"></div>
 <button id="s-btn" class="btn w-full py-3 mt-2 text-lg">Lanjutkan</button></form></div></div></main>
 
@@ -67,6 +95,7 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
     </div>
     <table class="w-full text-sm text-left mb-6 border-collapse">
         <tr class="border-b"><th class="py-2.5 w-1/3 text-gray-500 font-medium">NISN</th><td class="py-2.5 font-bold text-gray-900" id="cf-nisn"></td></tr>
+        <tr id="cf-np-row" class="border-b hidden"><th class="py-2.5 text-gray-500 font-medium">No. Peserta</th><td class="py-2.5 font-bold text-gray-900" id="cf-np"></td></tr>
         <tr class="border-b"><th class="py-2.5 text-gray-500 font-medium">Nama Siswa</th><td class="py-2.5 font-bold text-gray-900" id="cf-name"></td></tr>
         <tr class="border-b"><th class="py-2.5 text-gray-500 font-medium">Kelas</th><td class="py-2.5 font-bold text-gray-900" id="cf-kelas"></td></tr>
         <tr class="border-b"><th class="py-2.5 text-gray-500 font-medium">Mata Pelajaran</th><td class="py-2.5 font-bold text-gray-900" id="cf-mapel"></td></tr>
@@ -82,25 +111,25 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 
 <!-- LOGIN STAFF -->
 <main id="v-staff" class="view"><div class="min-h-screen flex items-center justify-center p-4"><div class="card w-full max-w-md border-t-4 border-t-blue-600">
-<h2 id="sl-title" class="text-2xl font-bold mb-5 text-center">Login Staf</h2>
+<div class="text-center mb-5"><div id="sl-ico-wrap" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 bg-blue-100"><i id="sl-ico" class="fas fa-user text-3xl text-blue-600"></i></div><h2 id="sl-title" class="text-2xl font-bold">Login Staf</h2><p id="sl-sub" class="text-sm text-gray-500 mt-1"></p></div>
 <form id="f-staff" class="space-y-4"><div><label class="lbl">Username</label><input id="sl-u" class="inp" required autocomplete="username"></div>
 <div><label class="lbl">Password</label><input id="sl-p" type="password" class="inp" required autocomplete="current-password"></div>
 <button id="sl-btn" class="btn w-full py-3">Masuk</button></form></div></div></main>
 
 <!-- ADMIN -->
 <main id="v-admin" class="view min-h-screen"><header class="bg-purple-700 text-white p-4 flex justify-between"><b><i class="fas fa-user-shield mr-2"></i>Dashboard Admin</b><button data-a="logout" class="bg-purple-900 px-3 py-1 rounded-lg text-sm">Keluar</button></header>
-<nav class="bg-white border-b px-4 flex gap-6"><button data-a="tab" data-id="a-siswa" class="tb t-a on">Siswa</button><button data-a="tab" data-id="a-guru" class="tb t-a">Guru</button><button data-a="tab" data-id="a-kelas" class="tb t-a">Kelas</button><button data-a="tab" data-id="a-akun" class="tb t-a">Keamanan</button></nav>
+<nav class="bg-white border-b px-4 flex gap-4 sm:gap-6 overflow-x-auto"><button data-a="tab" data-id="a-siswa" class="tb t-a on">Siswa</button><button data-a="tab" data-id="a-guru" class="tb t-a">Guru</button><button data-a="tab" data-id="a-kelas" class="tb t-a">Kelas</button><button data-a="tab" data-id="a-kartu" class="tb t-a">Kartu Ujian</button><button data-a="tab" data-id="a-leger" class="tb t-a">Leger Nilai</button><button data-a="tab" data-id="a-akun" class="tb t-a">Keamanan</button></nav>
 <div class="max-w-5xl mx-auto p-4 md:p-6">
-<div id="a-siswa" class="p-a"><div class="grid md:grid-cols-3 gap-5">
+<div id="a-siswa" class="p-a"><div class="grid grid-cols-1 md:grid-cols-3 gap-5">
 <div class="space-y-5"><form id="f-addS" class="card space-y-3"><h3 class="font-bold">Tambah / Ubah Siswa</h3>
-<div><label class="lbl">NISN</label><input id="as-n" class="inp" required></div><div><label class="lbl">Nama</label><input id="as-m" class="inp" required></div><div><label class="lbl">Kelas</label><select id="as-k" class="inp" required></select></div>
+<div><label class="lbl">NISN</label><input id="as-n" class="inp" required></div><div><label class="lbl">Nomor Peserta <span class="text-gray-400 font-normal">(opsional, boleh huruf &amp; angka)</span></label><input id="as-p" class="inp uppercase" autocomplete="off" placeholder="Misal: UJ9A001"></div><div><label class="lbl">Nama</label><input id="as-m" class="inp" required></div><div><label class="lbl">Kelas</label><select id="as-k" class="inp" required></select></div>
 <div class="flex gap-2"><button type="button" id="as-cancel" data-a="cancelS" class="hidden btn2 flex-1">Batal</button><button id="as-sub" class="btn flex-1">Simpan</button></div></form>
-<div class="card space-y-2"><h3 class="font-bold">Upload Massal</h3><p class="text-xs text-gray-500">Kolom: NISN, Nama, Kelas</p>
+<div class="card space-y-2"><h3 class="font-bold">Upload Massal</h3><p class="text-xs text-gray-500">Kolom: NISN, Nama, Kelas, No Peserta (opsional)</p>
 <input type="file" id="up-s" accept=".xlsx,.xls,.csv" class="hidden"><button onclick="up-s" data-a="pick" data-id="up-s" class="btn w-full bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel mr-1"></i>Pilih File</button><button data-a="dlTpl" class="btn2 w-full">Unduh Template</button></div></div>
-<div class="card md:col-span-2"><div class="flex justify-between items-center mb-3 gap-2"><h3 class="font-bold">Daftar Siswa <span id="cnt-s" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">0</span></h3><input id="a-q" class="inp max-w-[200px]" placeholder="Cari nama/NISN/kelas"></div>
-<div class="overflow-x-auto max-h-[60vh]"><table class="w-full text-sm"><thead><tr><th>NISN</th><th>Nama</th><th>Kelas</th><th>Aksi</th></tr></thead><tbody id="tb-s" class="divide-y"></tbody></table></div></div></div></div>
+<div class="card md:col-span-2"><div class="flex justify-between items-center mb-3 gap-2"><h3 class="font-bold">Daftar Siswa <span id="cnt-s" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">0</span></h3><input id="a-q" class="inp max-w-[200px]" placeholder="Cari nama/NISN/No. Peserta/kelas"></div>
+<div class="overflow-x-auto max-h-[60vh]"><table class="w-full text-sm"><thead><tr><th>NISN</th><th>No. Peserta</th><th>Nama</th><th>Kelas</th><th>Aksi</th></tr></thead><tbody id="tb-s" class="divide-y"></tbody></table></div></div></div></div>
 
-<div id="a-guru" class="p-a hidden"><div class="grid md:grid-cols-3 gap-5">
+<div id="a-guru" class="p-a hidden"><div class="grid grid-cols-1 md:grid-cols-3 gap-5">
 <div class="space-y-5">
     <form id="f-addT" class="card space-y-3"><h3 class="font-bold">Tambah / Ubah Guru</h3>
     <div><label class="lbl">Username (tanpa spasi)</label><input id="at-u" class="inp" required pattern="[A-Za-z0-9_.\-]+"></div><div><label class="lbl">Nama</label><input id="at-n" class="inp" required></div>
@@ -114,18 +143,59 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <div class="card md:col-span-2"><h3 class="font-bold mb-3">Daftar Guru <span id="cnt-t" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">0</span></h3>
 <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th>Username</th><th>Nama</th><th>Mapel</th><th>Kelas</th><th>Aksi</th></tr></thead><tbody id="tb-t" class="divide-y"></tbody></table></div></div></div></div>
 
-<div id="a-kelas" class="p-a hidden"><div class="grid md:grid-cols-3 gap-5">
+<div id="a-kelas" class="p-a hidden"><div class="grid grid-cols-1 md:grid-cols-3 gap-5">
 <form id="f-addK" class="card space-y-3"><h3 class="font-bold">Tambah Kelas</h3><p class="text-xs text-gray-500">Misal: 7, 8, 9, atau 7A, 7B</p>
 <div><label class="lbl">Nama Kelas</label><input id="ak-n" class="inp" required></div><button class="btn w-full">Simpan</button></form>
 <div class="card md:col-span-2"><h3 class="font-bold mb-3">Daftar Kelas</h3>
 <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th>Nama Kelas</th><th></th></tr></thead><tbody id="tb-k" class="divide-y"></tbody></table></div></div></div></div>
+<div id="a-kartu" class="p-a hidden">
+<div class="card space-y-3 mb-4 no-print">
+<h3 class="font-bold"><i class="fas fa-id-card mr-1 text-purple-600"></i>Cetak Kartu Ujian</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div><label class="lbl">Nama Sekolah</label><input id="kc-sch" class="inp" placeholder="Nama sekolah"></div>
+<div><label class="lbl">Judul Ujian</label><input id="kc-ttl" class="inp" placeholder="Misal: Penilaian Akhir Semester Ganjil"></div>
+<div><label class="lbl">Tahun Ajaran</label><input id="kc-yr" class="inp" placeholder="2026/2027"></div>
+<div><label class="lbl">Nama Kepala Sekolah</label><input id="kc-sgn" class="inp" placeholder="Nama lengkap beserta gelar"></div>
+<div><label class="lbl">NIP Kepala Sekolah</label><input id="kc-nip" class="inp" inputmode="numeric" autocomplete="off" placeholder="NIP (opsional)"></div>
+<div><label class="lbl">Kelas</label><select id="kc-cls" class="inp"></select></div>
+<div><label class="lbl">Cari siswa (nama / NISN / No. Peserta)</label><input id="kc-q" class="inp" placeholder="Kosongkan untuk semua"></div>
+</div>
+<div class="flex flex-wrap items-center gap-2"><button data-a="printCards" class="btn"><i class="fas fa-print mr-1"></i>Cetak Kartu</button><button data-a="saveCardCfg" class="btn2">Simpan Pengaturan Kartu</button><span id="kc-cnt" class="text-sm text-gray-500"></span></div>
+<p class="text-xs text-gray-500">Kartu dicetak di kertas A4 (2 kolom). Pilih kelas atau cari satu siswa untuk mencetak sebagian saja. Token ujian tidak dicetak karena diberikan guru/pengawas saat ujian.</p>
+</div>
+<div class="card space-y-3 mb-4 no-print">
+<h3 class="font-bold"><i class="fas fa-image mr-1 text-purple-600"></i>Foto Siswa &amp; Tanda Tangan</h3>
+<label class="flex items-center gap-2 text-sm font-semibold cursor-pointer"><input type="checkbox" id="kc-photo" class="w-4 h-4" checked> Tampilkan foto siswa di kartu</label>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="space-y-2"><p class="lbl !mb-0">Upload Foto Massal (ZIP)</p>
+<p class="text-xs text-gray-500">Kumpulkan foto dalam satu file .zip. Nama file = NISN siswa, misal <b>1001.jpg</b> (nomor peserta juga bisa). Format JPG/PNG/WEBP. Foto dipotong otomatis ke rasio 3x4 dan dikecilkan. Upload ulang akan menimpa foto lama.</p>
+<input type="file" id="kc-zip" accept=".zip" class="hidden"><button data-a="pick" data-id="kc-zip" class="btn2 w-full"><i class="fas fa-file-archive mr-1"></i>Pilih File ZIP Foto</button>
+<p id="kc-photo-cnt" class="text-xs text-gray-500"></p></div>
+<div class="space-y-2"><p class="lbl !mb-0">Tanda Tangan Kepala Sekolah (PNG)</p>
+<div class="border rounded-lg bg-gray-50 h-20 flex items-center justify-center overflow-hidden"><img id="kc-sig-prev" class="max-h-full hidden" alt="Tanda tangan"><span id="kc-sig-none" class="text-xs text-gray-400">Belum ada tanda tangan</span></div>
+<input type="file" id="kc-sig" accept="image/png" class="hidden">
+<div class="flex gap-2"><button data-a="pick" data-id="kc-sig" class="btn2 flex-1"><i class="fas fa-upload mr-1"></i>Upload PNG</button><button data-a="delSig" class="btn2 !text-red-600 !bg-red-50">Hapus</button></div>
+<p class="text-xs text-gray-500">Disarankan PNG berlatar transparan.</p></div>
+</div>
+</div>
+<div id="kc-preview" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+</div>
+
+<div id="a-leger" class="p-a hidden"><div class="card max-w-xl space-y-3">
+<h3 class="font-bold"><i class="fas fa-table mr-1 text-green-600"></i>Leger Nilai</h3>
+<p class="text-sm text-gray-600">Unduh seluruh nilai ujian yang sudah selesai dikerjakan, dari semua guru dan mata pelajaran, dalam satu file Excel.</p>
+<ul class="text-xs text-gray-500 list-disc ml-4 space-y-0.5"><li>Sheet <b>Semua Kelas</b> dan satu sheet per kelas: baris = siswa, kolom = mata pelajaran/paket, ditambah Jumlah, Rata-rata, dan Peringkat.</li><li>Sheet <b>Detail</b>: satu baris per ujian (benar, total soal, nilai, keterangan, pelanggaran, waktu).</li><li>Sel kosong berarti siswa belum mengerjakan.</li></ul>
+<div><label class="lbl">Kelas</label><select id="lg-cls" class="inp"></select></div>
+<button data-a="dlLeger" class="btn bg-green-600 hover:bg-green-700 w-full sm:w-auto"><i class="fas fa-file-excel mr-1"></i>Unduh Leger (Excel)</button>
+</div></div>
+
 <div id="a-akun" class="p-a hidden"><form id="f-pw" class="card max-w-md space-y-3"><h3 class="font-bold">Ganti Password Admin</h3><p class="text-xs text-gray-500">Username tetap <b>admin</b>. Segera ganti password bawaan.</p>
 <input id="pw-1" type="password" minlength="6" class="inp" placeholder="Password baru" required><input id="pw-2" type="password" class="inp" placeholder="Ulangi password" required><button class="btn">Simpan</button></form></div>
 </div></main>
 
 <!-- TEACHER -->
 <main id="v-teacher" class="view min-h-screen"><header class="bg-green-700 text-white p-4 flex justify-between"><div><b><i class="fas fa-chalkboard-teacher mr-2"></i>Dashboard Guru</b><p id="t-sub" class="text-xs text-green-200"></p></div><button data-a="logout" class="bg-green-900 px-3 py-1 rounded-lg text-sm self-start">Keluar</button></header>
-<nav class="bg-white border-b px-4 flex gap-6"><button data-a="tab" data-id="t-ujian" class="tb t-t on">Manajemen Ujian</button><button data-a="tab" data-id="t-hasil" class="tb t-t">Hasil Siswa</button></nav>
+<nav class="bg-white border-b px-4 flex gap-4 sm:gap-6 overflow-x-auto"><button data-a="tab" data-id="t-ujian" class="tb t-t on">Manajemen Ujian</button><button data-a="tab" data-id="t-hasil" class="tb t-t">Hasil Siswa</button></nav>
 <div class="max-w-5xl mx-auto p-4 md:p-6">
 <div id="t-ujian" class="p-t space-y-5">
 
@@ -135,7 +205,7 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
         <h3 class="font-bold text-lg">Daftar Paket Ujian</h3>
         <button data-a="newPaket" class="btn bg-green-600 hover:bg-green-700"><i class="fas fa-plus mr-1"></i>Buat Paket Baru</button>
     </div>
-    <div id="paket-list" class="grid md:grid-cols-3 gap-5 mt-4"></div>
+    <div id="paket-list" class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4"></div>
 </div>
 
 <!-- STATE 2: DETAIL PAKET (PENGATURAN & SOAL) -->
@@ -159,7 +229,7 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
         </div>
         <div class="mt-4 bg-white border rounded-lg p-3">
             <div class="flex items-center justify-between mb-2"><b class="text-sm text-blue-800"><i class="fas fa-calendar-alt mr-1"></i>Jadwal Buka &amp; Tutup Otomatis <span class="text-gray-400 font-normal">(opsional)</span></b><button type="button" data-a="clrSched" class="text-xs text-red-600 underline">Hapus jadwal</button></div>
-            <div class="grid sm:grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><label class="lbl">Buka pada</label><input id="c-open" type="datetime-local" class="inp"></div>
                 <div><label class="lbl">Tutup pada</label><input id="c-close" type="datetime-local" class="inp"></div>
             </div>
@@ -173,7 +243,7 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
         </div>
     </div>
     
-    <div class="grid lg:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div class="space-y-5 lg:col-span-1">
             
             <!-- FORM BUAT SOAL (GOOGLE FORM STYLE) -->
@@ -244,7 +314,7 @@ th{@apply px-3 py-2 text-xs uppercase text-gray-600 bg-gray-50 text-left}td{@app
 <div><p id="e-name" class="font-bold"></p><p id="e-info" class="text-xs text-gray-500"></p></div>
 <div class="flex items-center gap-3"><span id="e-prog" class="text-sm font-semibold text-gray-600"></span><span id="e-save" class="text-xs text-gray-500"></span>
 <span class="bg-gray-100 border rounded-full px-4 py-1.5"><i class="fas fa-clock text-blue-600 mr-1"></i><b id="e-timer" class="font-mono text-lg">--:--</b></span></div></div></header>
-<div class="max-w-5xl mx-auto p-4 grid md:grid-cols-4 gap-4">
+<div class="max-w-5xl mx-auto p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
 <div class="md:col-span-3"><div id="qbox" class="card"></div>
 <div class="flex justify-between mt-4"><button id="btn-prev" data-a="prev" class="btn2 hidden">&larr; Sebelumnya</button><button id="btn-next" data-a="next" class="btn ml-auto">Berikutnya &rarr;</button></div></div>
 <aside class="card h-fit"><p class="text-sm font-bold mb-2">Navigasi Soal</p><div id="nav" class="flex flex-wrap gap-1.5"></div>
@@ -332,6 +402,17 @@ return{get(){try{return JSON.parse(rd())}catch{return null}},set(v){const j=JSON
 clear(){try{localStorage.removeItem(K)}catch{}try{sessionStorage.removeItem(K)}catch{}try{document.cookie=K+'=;path=/;max-age=0;SameSite=None;Secure'}catch{}try{window.name=''}catch{}}}})();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>String(s??'').trim().toLowerCase();
+const normNP=v=>String(v??'').trim().toUpperCase().replace(/\s+/g,'');
+const calcScore=(c,tt)=>tt>0?Math.round(c/tt*10000)/100:0;
+const fs=n=>{n=Number(n);return isFinite(n)?String(Math.round(n*100)/100):'-'};
+const r2=x=>Math.round(x*100)/100;
+async function findStudent(inp){
+  const raw=String(inp||'').trim();
+  const d=await getDoc(D('students',raw));
+  if(d.exists())return{id:raw,data:d.data()};
+  const q=await getDocs(query(C('students'),where('noPeserta','==',normNP(raw))));
+  return q.empty?null:{id:q.docs[0].id,data:q.docs[0].data()};
+}
 const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const cm=(e,c)=>{e=norm(e);c=norm(c);return e===c||(/^\d+$/.test(e)&&c.startsWith(e)&&!/\d/.test(c[e.length]||''))};
 const classes=t=>String(t.kelas||'').split(',').map(norm).filter(Boolean);
@@ -398,22 +479,32 @@ async function resume(){
     routeBasedOnUrl();
 }
 
+function setStaffTheme(r){
+    const A=r==='admin',card=$('sl-ico-wrap').closest('.card');
+    $('sl-title').textContent=A?'Login Admin':'Login Guru';
+    $('sl-sub').textContent=A?'Khusus administrator sekolah':'Masuk dengan username & password dari admin';
+    $('sl-ico').className=`fas ${A?'fa-user-shield text-purple-600':'fa-chalkboard-teacher text-green-600'} text-3xl`;
+    $('sl-ico-wrap').className=`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 ${A?'bg-purple-100':'bg-green-100'}`;
+    card.classList.remove('border-t-blue-600','border-t-purple-600','border-t-green-600');card.classList.add(A?'border-t-purple-600':'border-t-green-600');
+    $('sl-btn').classList.add(...(A?['!bg-purple-600','hover:!bg-purple-700']:['!bg-green-600','hover:!bg-green-700']));
+    document.title=A?'Login Admin - Portal Ujian':'Login Guru - Portal Ujian';
+}
 function routeBasedOnUrl() {
     const p = new URLSearchParams(window.location.search);
-    if(p.has('admin')) { role = 'admin'; $('sl-title').textContent = 'Login Admin'; view('v-staff'); } 
-    else if (p.has('guru')) { role = 'teacher'; $('sl-title').textContent = 'Login Guru'; view('v-staff'); } 
+    if(p.has('admin')) { role = 'admin'; setStaffTheme('admin'); view('v-staff'); } 
+    else if (p.has('guru')) { role = 'teacher'; setStaffTheme('teacher'); view('v-staff'); } 
     else { role = 'student'; view('v-student'); }
 }
 
 // ===== AKSI KLIK =====
 const act={
-tab(id){const gr=id.split('-')[0];document.querySelectorAll('.p-'+gr).forEach(p=>p.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('.t-'+gr).forEach(b=>b.classList.toggle('on',b.dataset.id===id));if(id==='t-hasil')rR()},
+tab(id){const gr=id.split('-')[0];document.querySelectorAll('.p-'+gr).forEach(p=>p.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('.t-'+gr).forEach(b=>b.classList.toggle('on',b.dataset.id===id));if(id==='t-hasil')rR();if(id==='a-kartu')rKartu()},
 pick(id){$(id).click()},
 logout(){store.clear();location.href = window.location.pathname + window.location.search;},
 
 cancelS(){$('f-addS').reset();$('as-n').readOnly=false;$('as-cancel').classList.add('hidden');$('as-sub').textContent='Simpan'},
-editS(id){const s=S.students.find(x=>x.nisn===id);if(!s)return;$('as-n').value=s.nisn;$('as-n').readOnly=true;$('as-m').value=s.name;$('as-k').value=s.class;$('as-cancel').classList.remove('hidden');$('as-sub').textContent='Simpan Perubahan';$('f-addS').scrollIntoView({behavior:'smooth'})},
-delS(id){ask('Hapus siswa?',`NISN ${id} akan dihapus.`,()=>deleteDoc(D('students',id)).then(()=>toast('Siswa dihapus')).catch(e=>toast(fmtErr(e),'err')))},
+editS(id){const s=S.students.find(x=>x.nisn===id);if(!s)return;$('as-n').value=s.nisn;$('as-n').readOnly=true;$('as-m').value=s.name;$('as-p').value=s.noPeserta||'';$('as-k').value=s.class;$('as-cancel').classList.remove('hidden');$('as-sub').textContent='Simpan Perubahan';$('f-addS').scrollIntoView({behavior:'smooth'})},
+delS(id){ask('Hapus siswa?',`NISN ${id} akan dihapus.`,()=>deleteDoc(D('students',id)).then(()=>{deleteDoc(D('photos',id)).catch(()=>{});if(S.photos)delete S.photos[id];toast('Siswa dihapus')}).catch(e=>toast(fmtErr(e),'err')))},
 
 cancelT(){$('f-addT').reset();$('at-u').readOnly=false;$('at-p').required=true;$('at-p-hint').classList.add('hidden');$('at-k-list').querySelectorAll('input').forEach(i=>i.checked=false);$('at-cancel').classList.add('hidden');$('at-sub').textContent='Simpan'},
 editT(id){const t=S.teachers.find(x=>x.username===id);if(!t)return;$('at-u').value=t.username;$('at-u').readOnly=true;$('at-n').value=t.name;$('at-m').value=t.mapel;const kls=t.kelas.split(',').map(x=>x.trim());$('at-k-list').querySelectorAll('input').forEach(i=>i.checked=kls.includes(i.value));$('at-p').required=false;$('at-p').value='';$('at-p-hint').classList.remove('hidden');$('at-cancel').classList.remove('hidden');$('at-sub').textContent='Simpan Perubahan';$('f-addT').scrollIntoView({behavior:'smooth'})},
@@ -502,7 +593,7 @@ async saveCfg(){
     } catch(e) { toast(fmtErr(e),'err'); }
 },
 
-dlTpl(){dl([{NISN:'1001',Nama:'Budi Santoso',Kelas:'9A'}],'Template Siswa','Template_Siswa.xlsx')},
+dlTpl(){dl([{NISN:'1001',Nama:'Budi Santoso',Kelas:'9A','No Peserta':'UJ9A001'}],'Template Siswa','Template_Siswa.xlsx')},
 dlTplT(){dl([{Username:'guru01',Nama:'Budi Santoso',Mapel:'Matematika',Kelas:'7A, 7B',Password:'rahasia123'}],'Template Guru','Template_Guru.xlsx')},
 dlQTpl(){dl([{Pertanyaan:'Siapa penemu bola lampu?','Opsi A':'Thomas Edison','Opsi B':'Nikola Tesla','Opsi C':'Albert Einstein','Opsi D':'Isaac Newton','Jawaban (A/B/C/D)':'A','Gambar (URL, opsional)':''}],'Template Soal','Template_Soal.xlsx')},
 dlRes(){
@@ -516,6 +607,43 @@ dlRes(){
                 'Sisa Soal': e?.status==='in_progress' ? Math.max(0, qCount - ansCount) : 0,
                 Benar:e?.correct??'',Total:e?.total??'',Nilai:e?.score??'',Keterangan:e?.status==='submitted'?(e.score>=(pkt.kkm??70)?'Lulus':'Belum lulus'):'',Pelanggaran:e?.violations??''}
     }),'Hasil',`Hasil_${pkt.name}_${pkt.classes.join('-')}.xlsx`.replace(/\s+/g,'_'));
+},
+delSig(){setDoc(D('settings','cards'),{signature:deleteField()},{merge:true}).then(()=>toast('Tanda tangan dihapus')).catch(e=>toast(fmtErr(e),'err'))},
+saveCardCfg(){setDoc(D('settings','cards'),{school:$('kc-sch').value.trim(),title:$('kc-ttl').value.trim(),year:$('kc-yr').value.trim(),signer:$('kc-sgn').value.trim(),nip:$('kc-nip').value.trim(),showPhoto:$('kc-photo').checked},{merge:true}).then(()=>toast('Pengaturan kartu disimpan')).catch(e=>toast(fmtErr(e),'err'))},
+printCards(){if(!$('kc-preview').querySelector('.kc'))return toast('Tidak ada kartu untuk dicetak','err');document.body.classList.add('pc');window.print()},
+async dlLeger(){
+  try{
+    busy('Menyiapkan leger nilai...');
+    const [ps,es,ts,ss]=await Promise.all([getDocs(C('packets')),getDocs(C('exams')),getDocs(C('teachers')),getDocs(C('students'))]);
+    const P={},Tc={};ps.docs.forEach(d=>P[d.id]={id:d.id,...d.data()});ts.docs.forEach(d=>Tc[d.id]={username:d.id,...d.data()});
+    const studs=ss.docs.map(d=>({nisn:d.id,...d.data()})),SM=new Map(studs.map(s=>[s.nisn,s])),only=$('lg-cls').value;
+    const nat=(a,b)=>String(a).localeCompare(String(b),'id',{numeric:true});
+    const ex=es.docs.map(d=>({id:d.id,...d.data()})).filter(e=>e.status==='submitted'&&e.score!=null).map(e=>{const s=SM.get(e.nisn),p=P[e.paketId]||{},tc=Tc[e.teacherId]||{};return{...e,score:Number(e.score),_s:s,_cls:s?s.class:(e.class||''),_mapel:e.mapel||tc.mapel||'-',_paket:p.name||e.paketName||'-',_guru:tc.name||e.teacherId||'-',_kkm:p.kkm??70}}).filter(e=>!only||e._cls===only);
+    if(!ex.length)return toast('Belum ada nilai yang sudah dikerjakan','err');
+    const leger=(roster,exl)=>{
+      const cm2=new Map();exl.forEach(e=>{if(!cm2.has(e.paketId))cm2.set(e.paketId,{mapel:e._mapel,paket:e._paket})});
+      const cols=[...cm2.entries()].sort((a,b)=>nat(a[1].mapel,b[1].mapel)||nat(a[1].paket,b[1].paket));
+      const sc=new Map(exl.map(e=>[e.nisn+'|'+e.paketId,e.score]));
+      const head=['No','NISN','No. Peserta','Nama','Kelas',...cols.map(([,c])=>`${c.mapel} - ${c.paket}`),'Jumlah','Rata-rata','Peringkat'];
+      const body=roster.map(s=>{const v=cols.map(([id])=>sc.has(s.nisn+'|'+id)?sc.get(s.nisn+'|'+id):''),nn=v.filter(x=>x!==''),sum=nn.reduce((a,b)=>a+b,0);return{s,v,sum:nn.length?r2(sum):'',avg:nn.length?r2(sum/nn.length):''}});
+      const avgs=body.map(b=>b.avg).filter(x=>x!=='').sort((a,b)=>b-a);
+      const rows=body.map((b,i)=>[i+1,b.s.nisn,b.s.noPeserta||'',b.s.name,b.s.class,...b.v,b.sum,b.avg,b.avg===''?'':avgs.indexOf(b.avg)+1]);
+      const avgRow=['','','','Rata-rata','',...cols.map((_,j)=>{const xs=body.map(b=>b.v[j]).filter(x=>x!=='');return xs.length?r2(xs.reduce((a,b)=>a+b,0)/xs.length):''}),'','',''];
+      const ws=XLSX.utils.aoa_to_sheet([head,...rows,avgRow]);
+      ws['!cols']=head.map((h,i)=>({wch:i===3?28:i<3?14:i<5?10:Math.max(12,Math.min(32,String(h).length+2))}));
+      return ws;
+    };
+    const wb=XLSX.utils.book_new(),used=new Set();
+    const addSheet=(ws,name)=>{let n=String(name||'Sheet').replace(/[\\\/\?\*\[\]:]/g,'-').slice(0,31)||'Sheet',k=2;while(used.has(n.toLowerCase())){n=n.slice(0,28)+'-'+k++}used.add(n.toLowerCase());XLSX.utils.book_append_sheet(wb,ws,n)};
+    const roster=studs.filter(s=>!only||s.class===only).sort((a,b)=>nat(a.class,b.class)||norm(a.name).localeCompare(norm(b.name)));
+    if(!only)addSheet(leger(roster,ex),'Semua Kelas');
+    [...new Set(roster.map(s=>s.class))].sort(nat).forEach(c=>addSheet(leger(roster.filter(s=>s.class===c),ex.filter(e=>e._cls===c)),'Kelas '+c));
+    const fmt=v=>v?new Date(v).toLocaleString('id-ID'):'';
+    const detail=ex.slice().sort((a,b)=>nat(a._cls,b._cls)||norm(a.studentName||a._s?.name).localeCompare(norm(b.studentName||b._s?.name))||nat(a._mapel,b._mapel)).map(e=>({Kelas:e._cls,NISN:e.nisn,'No. Peserta':e._s?.noPeserta||'',Nama:e._s?.name||e.studentName||'','Mata Pelajaran':e._mapel,Paket:e._paket,Guru:e._guru,Benar:e.correct??'','Total Soal':e.total??'',Nilai:e.score,KKM:e._kkm,Keterangan:e.score>=e._kkm?'Lulus':'Belum lulus',Pelanggaran:e.violations??0,Mulai:fmt(e.startedAt),Selesai:fmt(e.submittedAt),'Dikumpulkan Otomatis':e.auto_closed_by_system?'Ya':''}));
+    addSheet(XLSX.utils.json_to_sheet(detail),'Detail');
+    XLSX.writeFile(wb,`Leger_Nilai_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast(`Leger diunduh: ${ex.length} nilai`);
+  }catch(x){console.error(x);toast(fmtErr(x),'err')}finally{busy()}
 },
 printRes(){
     if(!$('r-paket-sel').value) return toast('Pilih paket ujian terlebih dahulu', 'err');
@@ -545,30 +673,108 @@ catch(x){toast(fmtErr(x),'err')}btn.disabled=false});
 function openAdmin(){stop();
 subs.push(onSnapshot(D('settings','config'),d=>{if(d.exists())S.classes=d.data().classes||[];else S.classes=[];rA()}));
 subs.push(onSnapshot(C('students'),s=>{S.students=s.docs.map(d=>({nisn:d.id,...d.data()}));rA()},e=>toast(fmtErr(e),'err')));
-subs.push(onSnapshot(C('teachers'),s=>{S.teachers=s.docs.map(d=>({username:d.id,...d.data()}));rA()},e=>toast(fmtErr(e),'err')));view('v-admin')}
-function rA(){const q=norm($('a-q').value);const L=S.students.filter(s=>!q||[s.nisn,s.name,s.class].some(x=>norm(x).includes(q))).sort((a,b)=>norm(a.class).localeCompare(norm(b.class))||norm(a.name).localeCompare(norm(b.name)));
-$('cnt-s').textContent=S.students.length;$('tb-s').innerHTML=L.map(s=>`<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td class="text-right whitespace-nowrap"><button data-a="editS" data-id="${esc(s.nisn)}" class="text-blue-500 mr-3" title="Edit"><i class="fas fa-pen"></i></button><button data-a="delS" data-id="${esc(s.nisn)}" class="text-red-500" title="Hapus"><i class="fas fa-trash"></i></button></td></tr>`).join('')||'<tr><td colspan="4" class="text-center text-gray-400 py-4">Tidak ada data</td></tr>';
+subs.push(onSnapshot(C('teachers'),s=>{S.teachers=s.docs.map(d=>({username:d.id,...d.data()}));rA()},e=>toast(fmtErr(e),'err')));
+S.cardLoaded=false;S.photos={};S.card={};subs.push(onSnapshot(D('settings','cards'),d=>{S.card=d.exists()?d.data():{};if(d.exists()&&!S.cardLoaded){const c=S.card,sv=(id,v)=>{if(!$(id).value&&v)$(id).value=v};sv('kc-sch',c.school);sv('kc-ttl',c.title);sv('kc-yr',c.year);sv('kc-sgn',c.signer);sv('kc-nip',c.nip);if(c.showPhoto!==undefined)$('kc-photo').checked=!!c.showPhoto;S.cardLoaded=true}rKartu()}));loadPhotos();view('v-admin')}
+function rA(){const q=norm($('a-q').value);const L=S.students.filter(s=>!q||[s.nisn,s.name,s.class,s.noPeserta].some(x=>norm(x).includes(q))).sort((a,b)=>norm(a.class).localeCompare(norm(b.class))||norm(a.name).localeCompare(norm(b.name)));
+$('cnt-s').textContent=S.students.length;$('tb-s').innerHTML=L.map(s=>`<tr><td>${esc(s.nisn)}</td><td>${esc(s.noPeserta||'-')}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td class="text-right whitespace-nowrap"><button data-a="editS" data-id="${esc(s.nisn)}" class="text-blue-500 mr-3" title="Edit"><i class="fas fa-pen"></i></button><button data-a="delS" data-id="${esc(s.nisn)}" class="text-red-500" title="Hapus"><i class="fas fa-trash"></i></button></td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-gray-400 py-4">Tidak ada data</td></tr>';
 $('cnt-t').textContent=S.teachers.length;$('tb-t').innerHTML=S.teachers.map(t=>`<tr><td>${esc(t.username)}</td><td>${esc(t.name)}</td><td>${esc(t.mapel)}</td><td>${esc(t.kelas)}</td><td class="text-right whitespace-nowrap"><button data-a="editT" data-id="${esc(t.username)}" class="text-blue-500 mr-3" title="Edit"><i class="fas fa-pen"></i></button><button data-a="delT" data-id="${esc(t.username)}" class="text-red-500" title="Hapus"><i class="fas fa-trash"></i></button></td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-gray-400 py-4">Belum ada guru</td></tr>';
 $('tb-k').innerHTML=S.classes.map(k=>`<tr><td class="font-semibold">${esc(k)}</td><td class="text-right"><button data-a="delK" data-id="${esc(k)}" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')||'<tr><td colspan="2" class="text-center text-gray-400 py-4">Belum ada kelas</td></tr>';
 const sk=$('as-k').value; $('as-k').innerHTML='<option value="">-- Pilih Kelas --</option>'+S.classes.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join(''); $('as-k').value=sk;
 const tkl=[...$('at-k-list').querySelectorAll('input:checked')].map(i=>i.value);
-$('at-k-list').innerHTML=S.classes.map(k=>`<label class="flex items-center gap-1.5 bg-white border px-2 py-1 rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" value="${esc(k)}" class="w-4 h-4 text-blue-600" ${tkl.includes(k)?'checked':''}> ${esc(k)}</label>`).join('')||'<span class="text-xs text-red-500">Tambahkan kelas di menu Kelas terlebih dahulu!</span>';}
+$('at-k-list').innerHTML=S.classes.map(k=>`<label class="flex items-center gap-1.5 bg-white border px-2 py-1 rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" value="${esc(k)}" class="w-4 h-4 text-blue-600" ${tkl.includes(k)?'checked':''}> ${esc(k)}</label>`).join('')||'<span class="text-xs text-red-500">Tambahkan kelas di menu Kelas terlebih dahulu!</span>';
+['kc-cls','lg-cls'].forEach(id=>{const el=$(id),v=el.value;el.innerHTML='<option value="">Semua kelas</option>'+S.classes.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('');el.value=v});
+rKartu();}
 $('a-q').addEventListener('input',rA);
+
+// ===== KARTU UJIAN =====
+async function loadPhotos(){try{const r=await getDocs(C('photos'));S.photos={};r.docs.forEach(d=>{S.photos[d.id]=d.data().img});rKartu()}catch(e){toast(fmtErr(e),'err')}}
+function rKartu(){
+  const box=$('kc-preview');if(!box)return;
+  const cls=$('kc-cls').value,q=norm($('kc-q').value);
+  const L=S.students.filter(s=>(!cls||s.class===cls)&&(!q||[s.nisn,s.name,s.noPeserta,s.class].some(x=>norm(x).includes(q)))).sort((a,b)=>String(a.class).localeCompare(String(b.class),'id',{numeric:true})||norm(a.name).localeCompare(norm(b.name)));
+  const c=S.card||{},ph=S.photos||{},showPh=$('kc-photo').checked,sig=c.signature||'';
+  const sch=esc($('kc-sch').value.trim()||'NAMA SEKOLAH'),ttl=esc($('kc-ttl').value.trim()),yr=esc($('kc-yr').value.trim()),sg=esc($('kc-sgn').value.trim()||'..............................'),nip=esc($('kc-nip').value.trim());
+  $('kc-cnt').textContent=`${L.length} kartu`;
+  $('kc-photo-cnt').textContent=`Foto tersimpan: ${S.students.filter(s=>ph[s.nisn]).length} dari ${S.students.length} siswa`;
+  const sp=$('kc-sig-prev');if(sig){sp.src=sig;sp.classList.remove('hidden');$('kc-sig-none').classList.add('hidden')}else{sp.removeAttribute('src');sp.classList.add('hidden');$('kc-sig-none').classList.remove('hidden')}
+  box.innerHTML=L.map(s=>`<div class="kc"><div class="kc-h"><b>${sch}</b><span>KARTU PESERTA UJIAN</span>${ttl||yr?`<small>${ttl}${ttl&&yr?' &middot; ':''}${yr?'T.A. '+yr:''}</small>`:''}</div>
+<div class="kc-b">${showPh?(ph[s.nisn]?`<div class="kc-ph has"><img src="${esc(ph[s.nisn])}" alt=""></div>`:'<div class="kc-ph">Pas Foto<br>3 x 4</div>'):''}<table><tr><td>Nama</td><td><b>${esc(s.name)}</b></td></tr><tr><td>Kelas</td><td>${esc(s.class)}</td></tr><tr><td>NISN</td><td>${esc(s.nisn)}</td></tr><tr><td>No. Peserta</td><td><b>${esc(s.noPeserta||'-')}</b></td></tr></table></div>
+<div class="kc-f"><span>Login ujian: NISN atau No. Peserta + token dari pengawas.</span><div class="kc-sg">Kepala Sekolah<div class="kc-sig">${sig?`<img src="${esc(sig)}" alt="">`:''}</div><u>${sg}</u>${nip?`<div>NIP. ${nip}</div>`:''}</div></div></div>`).join('')||'<p class="text-sm text-gray-400 text-center py-6 md:col-span-2">Tidak ada siswa yang cocok.</p>';
+}
+['kc-sch','kc-ttl','kc-yr','kc-sgn','kc-nip','kc-q'].forEach(i=>$(i).addEventListener('input',rKartu));
+$('kc-photo').addEventListener('change',rKartu);
+
+// pengolah gambar: potong ke 3:4 (foto) / skala proporsional (tanda tangan PNG transparan)
+const loadImg=blob=>new Promise((ok,no)=>{const u=URL.createObjectURL(blob),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);ok(im)};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('gambar tidak bisa dibaca'))};im.src=u});
+async function fotoJpeg(blob,W=240,H=320){const im=await loadImg(blob),c=document.createElement('canvas'),x=c.getContext('2d');c.width=W;c.height=H;x.fillStyle='#fff';x.fillRect(0,0,W,H);const k=Math.max(W/im.width,H/im.height),sw=W/k,sh=H/k;x.drawImage(im,(im.width-sw)/2,(im.height-sh)*0.2,sw,sh,0,0,W,H);return c.toDataURL('image/jpeg',.82)}
+async function ttdPng(blob,MW=500,MH=200){const im=await loadImg(blob),k=Math.min(1,MW/im.width,MH/im.height),c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/png')}
+$('kc-zip').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  if(typeof JSZip==='undefined')return toast('Pustaka ZIP gagal dimuat. Periksa koneksi lalu muat ulang halaman.','err');
+  if(!S.students.length)return toast('Belum ada data siswa. Tambahkan siswa dulu.','err');
+  try{
+    busy('Membuka file ZIP...');
+    const z=await JSZip.loadAsync(await f.arrayBuffer());
+    const byId=new Map();S.students.forEach(s=>byId.set(s.nisn,s.nisn));S.students.forEach(s=>{if(s.noPeserta&&!byId.has(s.noPeserta))byId.set(s.noPeserta,s.nisn)});
+    const files=Object.values(z.files).filter(x=>!x.dir&&!/(^|\/)__MACOSX\//.test(x.name)&&!x.name.split('/').pop().startsWith('.'));
+    const imgs=files.filter(x=>/\.(jpe?g|png|webp)$/i.test(x.name)),skipped=files.length-imgs.length;
+    if(!imgs.length)return toast('Tidak ada file foto (JPG/PNG/WEBP) di dalam ZIP','err');
+    const items=[],unmatched=[],failed=[],seen=new Set();let i=0;
+    for(const en of imgs){
+      i++;busy(`Memproses foto ${i} dari ${imgs.length}...`);
+      const base=en.name.split('/').pop().replace(/\.[^.]+$/,'').trim(),id=byId.get(base)||byId.get(normNP(base));
+      if(!id){unmatched.push(en.name.split('/').pop());continue}
+      try{const img=await fotoJpeg(new Blob([await en.async('arraybuffer')]));const k=items.findIndex(x=>x[0].id===id);const row=[D('photos',id),{img}];if(k>=0)items[k]=row;else items.push(row);seen.add(id)}
+      catch(x){failed.push(en.name.split('/').pop())}
+    }
+    busy('Menyimpan foto...');
+    for(let j=0;j<items.length;j+=20)await batchSet(items.slice(j,j+20));
+    await loadPhotos();
+    if(unmatched.length||failed.length)console.warn('Foto tidak cocok:',unmatched,'gagal:',failed);
+    const parts=[`${items.length} foto tersimpan`];
+    if(unmatched.length)parts.push(`${unmatched.length} tidak cocok NISN (${unmatched.slice(0,3).join(', ')}${unmatched.length>3?', ...':''})`);
+    if(failed.length)parts.push(`${failed.length} gagal dibaca`);
+    if(skipped)parts.push(`${skipped} file non-foto dilewati`);
+    toast(parts.join(', '),unmatched.length||failed.length?'warn':'ok');
+  }catch(x){console.error(x);toast('Gagal membaca file ZIP / menyimpan foto','err')}finally{busy()}
+});
+$('kc-sig').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  if(f.type!=='image/png'&&!/\.png$/i.test(f.name))return toast('Gunakan file berformat PNG','err');
+  try{busy('Memproses tanda tangan...');const d=await ttdPng(f);await setDoc(D('settings','cards'),{signature:d},{merge:true});toast('Tanda tangan tersimpan')}
+  catch(x){console.error(x);toast('Gagal memproses gambar tanda tangan','err')}finally{busy()}
+});
+$('kc-cls').addEventListener('change',rKartu);
+window.addEventListener('afterprint',()=>document.body.classList.remove('pc'));
 
 $('f-addS').addEventListener('submit',async e=>{
     e.preventDefault();
     try {
-        await setDoc(D('students',$('as-n').value.trim()), {name:$('as-m').value.trim(), class:$('as-k').value.trim(), registeredAt:new Date().toISOString()}, {merge:true});
+        const nisn=$('as-n').value.trim(),np=normNP($('as-p').value);
+        if(np&&!/^[A-Z0-9._\-\/]+$/.test(np))return toast('Nomor peserta hanya boleh huruf, angka, titik, strip, atau garis miring','err');
+        const bad=np&&S.students.find(x=>x.nisn!==nisn&&(x.noPeserta===np||x.nisn===np));
+        if(bad)return toast(`Nomor peserta "${np}" sudah dipakai ${bad.name} (NISN ${bad.nisn})`,'err');
+        const clash=S.students.find(x=>x.nisn!==nisn&&x.noPeserta===nisn);
+        if(clash)return toast(`NISN ini sama dengan nomor peserta milik ${clash.name}`,'err');
+        await setDoc(D('students',nisn), {name:$('as-m').value.trim(), class:$('as-k').value.trim(), noPeserta:np||deleteField(), registeredAt:new Date().toISOString()}, {merge:true});
         toast($('as-n').readOnly ? 'Siswa diperbarui' : 'Siswa disimpan');
         act.cancelS();
     } catch(x) { toast(fmtErr(x),'err'); }
 });
 
 $('up-s').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{busy('Memproses file...');const rows=await readXlsx(f),items=[],newClasses=[];
-rows.forEach(r=>{const n=g(r,'nisn'),m=g(r,'nama','name'),k=g(r,'kelas','class');if(n&&m&&k){const cls=String(k).trim();items.push([D('students',String(n).trim()),{name:String(m).trim(),class:cls,registeredAt:new Date().toISOString()}]);if(!S.classes.includes(cls)&&!newClasses.includes(cls))newClasses.push(cls)}});
+const byNp=new Map(S.students.filter(x=>x.noPeserta).map(x=>[x.noPeserta,x.nisn])),ids=new Set(S.students.map(x=>x.nisn));let skipNp=0;
+rows.forEach(r=>{const n0=g(r,'nisn'),m=g(r,'nama','name'),k=g(r,'kelas','class');if(n0&&m&&k){const n=String(n0).trim(),cls=String(k).trim();
+ if(byNp.has(n)&&byNp.get(n)!==n){skipNp++;return}
+ let np=normNP(g(r,'no peserta','nomor peserta','no. peserta','nopeserta','no_peserta','nomor_peserta')||'');const old=S.students.find(x=>x.nisn===n);
+ if(np&&(!/^[A-Z0-9._\-\/]+$/.test(np)||(byNp.has(np)&&byNp.get(np)!==n)||(ids.has(np)&&np!==n))){skipNp++;np=''}
+ if(!np&&old&&old.noPeserta)np=old.noPeserta;
+ if(np)byNp.set(np,n);ids.add(n);
+ const d={name:String(m).trim(),class:cls,registeredAt:new Date().toISOString()};if(np)d.noPeserta=np;
+ items.push([D('students',n),d]);if(!S.classes.includes(cls)&&!newClasses.includes(cls))newClasses.push(cls)}});
 if(!items.length)return toast('Tidak ada baris valid. Periksa kolom NISN, Nama, Kelas.','err');await batchSet(items);
 if(newClasses.length){const c=[...new Set([...S.classes,...newClasses])].sort();await setDoc(D('settings','config'),{classes:c},{merge:true});}
-toast(`${items.length} siswa diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
+toast(`${items.length} siswa diupload${rows.length>items.length?`, ${rows.length-items.length} baris dilewati`:''}${skipNp?`, ${skipNp} nomor peserta bentrok diabaikan`:''}`)}catch(x){toast('Gagal membaca file / menyimpan','err')}finally{busy();e.target.value=''}});
 
 $('f-addT').addEventListener('submit',async e=>{
     e.preventDefault();
@@ -781,7 +987,7 @@ function rR(){
                 e._locking = true; // Kunci agar tidak berulang
                 const ans = e.answers || {};
                 const correct = qList.filter(q => ans[q.id] === q.answer).length;
-                const score = qCount > 0 ? Math.round(correct/qCount*100) : 0;
+                const score = calcScore(correct, qCount);
                 setDoc(D('exams', e.id), {status:'submitted', score, correct, total:qCount, submittedAt:new Date().toISOString(), auto_closed_by_system:true}, {merge:true}).catch(()=>e._locking=false);
             }
         }
@@ -789,7 +995,7 @@ function rR(){
 
     const done=r.filter(x=>x.e?.status==='submitted'),sc=done.map(x=>x.e.score);
     const box=(l,v)=>`<div class="bg-gray-50 border rounded-lg p-3 text-center"><p class="text-xs text-gray-500">${l}</p><p class="text-xl font-bold">${v}</p></div>`;
-    $('stats').innerHTML=box('Peserta',r.length)+box('Selesai',done.length)+box('Rata-rata',sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):'-')+box('Tertinggi / Terendah',sc.length?`${Math.max(...sc)} / ${Math.min(...sc)}`:'-')+box('Lulus',sc.length?`${sc.filter(x=>x>=kkm).length}/${sc.length}`:'-');
+    $('stats').innerHTML=box('Peserta',r.length)+box('Selesai',done.length)+box('Rata-rata',sc.length?fs(sc.reduce((a,b)=>a+b,0)/sc.length):'-')+box('Tertinggi / Terendah',sc.length?`${fs(Math.max(...sc))} / ${fs(Math.min(...sc))}`:'-')+box('Lulus',sc.length?`${sc.filter(x=>x>=kkm).length}/${sc.length}`:'-');
     const bd={'Belum mulai':'bg-gray-100 text-gray-600','Mengerjakan':'bg-yellow-100 text-yellow-700','Selesai':'bg-green-100 text-green-700'};
 
     $('tb-r').innerHTML=r.map(({s,e})=> {
@@ -805,7 +1011,7 @@ function rR(){
             sisaWaktu = 'Selesai';
             sisaSoal = '-';
         }
-        return `<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td><span class="px-2 py-1 rounded-lg text-xs font-bold ${bd[st(e)]}">${st(e)}</span></td><td ${timerAttr}>${sisaWaktu}</td><td>${sisaSoal}</td><td>${e?.status==='submitted'?`${e.correct}/${e.total}`:'-'}</td><td class="font-bold ${e?.score>=kkm?'text-green-600':'text-red-600'}">${e?.status==='submitted'?e.score:'-'}</td><td>${e?.violations?`<span class="text-red-600 font-semibold">${e.violations}</span>`:'0'}</td><td class="no-print">${e?`<button data-a="reset" data-id="${esc(e.id)}" class="text-xs text-red-600 underline hover:text-red-800">Reset</button>`:''}</td></tr>`;
+        return `<tr><td>${esc(s.nisn)}</td><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td><span class="px-2 py-1 rounded-lg text-xs font-bold ${bd[st(e)]}">${st(e)}</span></td><td ${timerAttr}>${sisaWaktu}</td><td>${sisaSoal}</td><td>${e?.status==='submitted'?`${e.correct}/${e.total}`:'-'}</td><td class="font-bold ${e?.score>=kkm?'text-green-600':'text-red-600'}">${e?.status==='submitted'?fs(e.score):'-'}</td><td>${e?.violations?`<span class="text-red-600 font-semibold">${e.violations}</span>`:'0'}</td><td class="no-print">${e?`<button data-a="reset" data-id="${esc(e.id)}" class="text-xs text-red-600 underline hover:text-red-800">Reset</button>`:''}</td></tr>`;
     }).join('')||'<tr><td colspan="10" class="text-center text-gray-400 py-4">Belum ada siswa di kelas Anda.</td></tr>'
 }
 
@@ -828,7 +1034,7 @@ function showResultView(pkt,score,correct,total,msg){
     if(pkt.showScore!==false&&score!=null){
         const kkm=pkt.kkm??70;
         box.classList.remove('hidden');
-        $('r-val').textContent=score;
+        $('r-val').textContent=fs(score);
         $('r-note').innerHTML=`${correct} dari ${total} benar &middot; <b class="${score>=kkm?'text-green-600':'text-red-600'}">${score>=kkm?'Lulus':'Belum lulus'}</b>`;
     } else box.classList.add('hidden');
     view('v-result');
@@ -840,7 +1046,7 @@ function showPastResult(pkt,ex){
 async function autoCloseAndShow(pkt,ex,id){
     const qs=await getDocs(query(C('questions'),where('paketId','==',pkt.id)));
     const list=qs.docs.map(d=>({id:d.id,...d.data()}));
-    const ans=ex.answers||{},total=list.length,correct=list.filter(q=>ans[q.id]===q.answer).length,score=total?Math.round(correct/total*100):0;
+    const ans=ex.answers||{},total=list.length,correct=list.filter(q=>ans[q.id]===q.answer).length,score=calcScore(correct,total);
     await setDoc(D('exams',id),{status:'submitted',score,correct,total,submittedAt:new Date().toISOString(),auto_closed_by_system:true},{merge:true});
     store.clear();
     showResultView(pkt,score,correct,total,'Waktu ujian Anda telah habis dan jawaban terakhir sudah dikumpulkan otomatis.');
@@ -851,9 +1057,10 @@ async function prepareExam(nisn, tok) {
     if(ps.empty) throw 'Token ujian tidak valid.';
     const pkt = {id: ps.docs[0].id, ...ps.docs[0].data()};
 
-    const sd = await getDoc(D('students', nisn));
-    if(!sd.exists()) throw 'NISN tidak terdaftar. Hubungi admin.';
-    const s = {nisn, ...sd.data()};
+    const found = await findStudent(nisn);
+    if(!found) throw 'NISN / Nomor Peserta tidak terdaftar. Hubungi admin.';
+    nisn = found.id;
+    const s = {nisn, ...found.data};
     if(!pkt.classes.some(e => cm(e, s.class))) throw `Ujian ini khusus kelas ${pkt.classes.join(', ')}.`;
 
     const tDoc = await getDoc(D('teachers', pkt.teacherId));
@@ -874,6 +1081,8 @@ async function prepareExam(nisn, tok) {
     prepData = {nisn, tok, pkt, s, t, id, ex};
 
     $('cf-nisn').textContent = s.nisn;
+    $('cf-np').textContent = s.noPeserta || '';
+    $('cf-np-row').classList.toggle('hidden', !s.noPeserta);
     $('cf-name').textContent = s.name;
     $('cf-kelas').textContent = s.class;
     $('cf-mapel').textContent = t.mapel;
@@ -918,7 +1127,7 @@ async function startConfirmedExam(silentData, isSilentResume) {
     store.set({role: 'student', nisn, tok});
     
     $('e-name').textContent = s.name;
-    $('e-info').textContent = `NISN ${s.nisn} | Kelas ${s.class} | ${pkt.name}`;
+    $('e-info').textContent = `NISN ${s.nisn}${s.noPeserta?' | No. Peserta '+s.noPeserta:''} | Kelas ${s.class} | ${pkt.name}`;
     
     try { await document.documentElement.requestFullscreen(); } catch {}
     
@@ -962,7 +1171,7 @@ async function finish(){
     U.on=false;
     clearInterval(U.timer);
     clearInterval(U.retry);
-    const total=U.qs.length,correct=U.qs.filter(q=>U.ans[q.id]===q.answer).length,score=Math.round(correct/total*100);
+    const total=U.qs.length,correct=U.qs.filter(q=>U.ans[q.id]===q.answer).length,score=calcScore(correct,total);
     let ok=false;
     for(let i=0;i<3&&!ok;i++){
         U.on=true;
